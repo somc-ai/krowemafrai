@@ -1,99 +1,233 @@
 {
-    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
-    "contentVersion": "1.0.0.0",
-    "parameters": {
-      "aiModelDeployments": {
-        "value": [
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "useWafAlignedArchitecture": {
+      "value": false
+    },
+    "solutionPrefix": {
+      "value": "macae${uniqueString(deployer().objectId, deployer().tenantId, subscription().subscriptionId, resourceGroup().id)}"
+    },
+    "solutionLocation": {
+      "value": "westeurope"
+    },
+    "enableTelemetry": {
+      "value": true
+    },
+    "existingLogAnalyticsWorkspaceId": {
+      "value": ""
+    },
+    "aiDeploymentsLocation": {
+      "value": "westeurope"
+    },
+    "gptModelName": {
+      "value": "gpt-4o"
+    },
+    "gptModelVersion": {
+      "value": "2024-05-13"
+    },
+    "modelDeploymentType": {
+      "value": "GlobalStandard"
+    },
+    "gptModelCapacity": {
+      "value": 150
+    },
+    "imageTag": {
+      "value": "latest"
+    },
+    "tags": {
+      "value": {}
+    },
+    "logAnalyticsWorkspaceConfiguration": {
+      "value": {
+        "enabled": true,
+        "name": "log-${solutionPrefix}",
+        "location": "westeurope",
+        "sku": "PerGB2018",
+        "tags": {},
+        "dataRetentionInDays": 30,
+        "existingWorkspaceResourceId": ""
+      }
+    },
+    "applicationInsightsConfiguration": {
+      "value": {
+        "enabled": true,
+        "name": "appi-${solutionPrefix}",
+        "location": "westeurope",
+        "tags": {},
+        "retentionInDays": 30
+      }
+    },
+    "userAssignedManagedIdentityConfiguration": {
+      "value": {
+        "enabled": true,
+        "name": "id-${solutionPrefix}",
+        "location": "westeurope",
+        "tags": {}
+      }
+    },
+    "networkSecurityGroupBackendConfiguration": {
+      "value": {
+        "enabled": true,
+        "name": "nsg-backend-${solutionPrefix}",
+        "location": "westeurope",
+        "tags": {},
+        "securityRules": null
+      }
+    },
+    "networkSecurityGroupContainersConfiguration": {
+      "value": {
+        "enabled": true,
+        "name": "nsg-containers-${solutionPrefix}",
+        "location": "westeurope",
+        "tags": {},
+        "securityRules": null
+      }
+    },
+    "networkSecurityGroupBastionConfiguration": {
+      "value": {
+        "enabled": true,
+        "name": "nsg-bastion-${solutionPrefix}",
+        "location": "westeurope",
+        "tags": {},
+        "securityRules": null
+      }
+    },
+    "networkSecurityGroupAdministrationConfiguration": {
+      "value": {
+        "enabled": true,
+        "name": "nsg-administration-${solutionPrefix}",
+        "location": "westeurope",
+        "tags": {},
+        "securityRules": null
+      }
+    },
+    "virtualNetworkConfiguration": {
+      "value": {
+        "enabled": false,
+        "name": "vnet-${solutionPrefix}",
+        "location": "westeurope",
+        "tags": {},
+        "addressPrefixes": null,
+        "subnets": null
+      }
+    },
+    "bastionConfiguration": {
+      "value": {
+        "enabled": true,
+        "name": "bas-${solutionPrefix}",
+        "location": "westeurope",
+        "tags": {},
+        "sku": "Standard",
+        "virtualNetworkResourceId": null,
+        "publicIpResourceName": "pip-bas${solutionPrefix}"
+      }
+    },
+    "virtualMachineConfiguration": {
+      "value": {
+        "enabled": false, // <-- Deze is nu op FALSE gezet
+        "name": "vm${solutionPrefix}",
+        "location": "westeurope",
+        "tags": {},
+        "adminUsername": "adminuser", // Deze is niet relevant als enabled op false staat
+        "adminPassword": "P@ssw0rd1234", // Deze is niet relevant als enabled op false staat
+        "vmSize": "Standard_D2s_v3",
+        "subnetResourceId": null
+      }
+    },
+    "aiFoundryAiServicesConfiguration": {
+      "value": {
+        "enabled": true,
+        "name": "aisa-${solutionPrefix}",
+        "location": "westeurope",
+        "sku": "S0",
+        "deployments": [
           {
-            "name": "gpt",
+            "name": "gpt-4o",
             "model": {
               "name": "gpt-4o",
-              "version": "2024-08-06",
+              "version": "2024-05-13",
               "format": "OpenAI"
             },
             "sku": {
               "name": "GlobalStandard",
-              "capacity": 140
+              "capacity": 150
             }
           }
-        ]
-      },     
-      "solutionPrefix": {
-        "value": "${AZURE_ENV_NAME}"
-      },
-      "solutionLocation": {
-        "value": "${AZURE_LOCATION}"
-      },
-      "aiDeploymentsLocation": {
-        "value": "${AZURE_ENV_OPENAI_LOCATION}"
-      },
-      "modelDeploymentType": {
-        "value": "${AZURE_ENV_MODEL_DEPLOYMENT_TYPE}"
-      },
-      "gptModelName": {
-        "value": "${AZURE_ENV_MODEL_NAME}"
-      },
-      "gptModelVersion": {
-        "value": "${AZURE_ENV_MODEL_VERSION}"
-      },
-      "gptModelCapacity": {
-        "value": "${AZURE_ENV_MODEL_CAPACITY}"
-      },
-      "imageTag": {
-        "value": "${AZURE_ENV_IMAGE_TAG}"
-      },
-      "enableTelemetry": {
-        "value": "${AZURE_ENV_ENABLE_TELEMETRY}"
-      },
-      "existingLogAnalyticsWorkspaceId": {
-        "value": "${AZURE_ENV_LOG_ANALYTICS_WORKSPACE_ID}"
-      },
-      "backendExists": {
-        "value": "${SERVICE_BACKEND_RESOURCE_EXISTS=false}"
-      },
-      "backendDefinition": {
-        "value": {
-          "settings": [
-            {
-              "name": "",
-              "value": "${VAR}",
-              "_comment_name": "The name of the environment variable when running in Azure. If empty, ignored.",
-              "_comment_value": "The value to provide. This can be a fixed literal, or an expression like ${VAR} to use the value of 'VAR' from the current environment."
-            },
-            {
-              "name": "",
-              "value": "${VAR_S}",
-              "secret": true,
-              "_comment_name": "The name of the environment variable when running in Azure. If empty, ignored.",
-              "_comment_value": "The value to provide. This can be a fixed literal, or an expression like ${VAR_S} to use the value of 'VAR_S' from the current environment."
-            }
-          ]
-        }
-      },
-      "frontendExists": {
-        "value": "${SERVICE_FRONTEND_RESOURCE_EXISTS=false}"
-      },
-      "frontendDefinition": {
-        "value": {
-          "settings": [
-            {
-              "name": "",
-              "value": "${VAR}",
-              "_comment_name": "The name of the environment variable when running in Azure. If empty, ignored.",
-              "_comment_value": "The value to provide. This can be a fixed literal, or an expression like ${VAR} to use the value of 'VAR' from the current environment."
-            },
-            {
-              "name": "",
-              "value": "${VAR_S}",
-              "secret": true,
-              "_comment_name": "The name of the environment variable when running in Azure. If empty, ignored.",
-              "_comment_value": "The value to provide. This can be a fixed literal, or an expression like ${VAR_S} to use the value of 'VAR_S' from the current environment."
-            }
-          ]
-        }
-      },
-      "principalId": {
-        "value": "${AZURE_PRINCIPAL_ID}"
+        ],
+        "subnetResourceId": null,
+        "modelCapacity": 150
+      }
+    },
+    "aiFoundryAiProjectConfiguration": {
+      "value": {
+        "enabled": true,
+        "name": "aifp-${solutionPrefix}",
+        "location": "westeurope",
+        "sku": "Basic",
+        "tags": {}
+      }
+    },
+    "cosmosDbAccountConfiguration": {
+      "value": {
+        "enabled": true,
+        "name": "cosmos-${solutionPrefix}",
+        "location": "westeurope",
+        "tags": {},
+        "subnetResourceId": null,
+        "sqlDatabases": null
+      }
+    },
+    "containerAppEnvironmentConfiguration": {
+      "value": {
+        "enabled": true,
+        "name": "cae-${solutionPrefix}",
+        "location": "westeurope",
+        "tags": {},
+        "subnetResourceId": null
+      }
+    },
+    "containerAppConfiguration": {
+      "value": {
+        "enabled": true,
+        "name": "ca-${solutionPrefix}",
+        "location": "westeurope",
+        "tags": {},
+        "environmentResourceId": null,
+        "concurrentRequests": "100",
+        "containerCpu": "2.0",
+        "containerMemory": "4.0Gi",
+        "containerImageRegistryDomain": "somcaimariacreg.azurecr.io",
+        "containerImageName": "macaebackend",
+        "containerImageTag": "latest",
+        "containerName": "backend",
+        "ingressTargetPort": 8000,
+        "maxReplicas": 1,
+        "minReplicas": 1
+      }
+    },
+    "webServerFarmConfiguration": {
+      "value": {
+        "enabled": true,
+        "name": "asp-${solutionPrefix}",
+        "location": "westeurope",
+        "skuName": "B2",
+        "skuCapacity": 1,
+        "tags": {}
+      }
+    },
+    "webSiteConfiguration": {
+      "value": {
+        "enabled": true,
+        "name": "app-${solutionPrefix}",
+        "location": "westeurope",
+        "containerImageRegistryDomain": "somcaimariacreg.azurecr.io",
+        "containerImageName": "macaefrontend",
+        "containerImageTag": "latest",
+        "containerName": "backend",
+        "tags": {},
+        "environmentResourceId": null
       }
     }
+  }
 }
