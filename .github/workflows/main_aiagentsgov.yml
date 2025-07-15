@@ -24,20 +24,6 @@ jobs:
           npm install
           npm run build
 
-      - name: Set up Python 3.11
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.11'
-
-      - name: Install backend dependencies
-        run: |
-          cd src/backend
-          pip install -r requirements.txt --target=backend_deps
-
-      - name: Copy backend to frontend build folder
-        run: |
-          cp -r src/backend backend_deps src/frontend/build/api
-
       - name: Zip artifact for deployment
         run: |
           cd src/frontend
