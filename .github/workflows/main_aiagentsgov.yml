@@ -27,7 +27,7 @@ jobs:
       - name: Zip artifact for deployment
         run: |
           cd src/frontend
-          zip -r ../../release.zip dist/ package.json
+          zip -r ../../release.zip build/ package.json
 
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
