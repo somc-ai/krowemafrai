@@ -1,30 +1,25 @@
 name: Deploy Backend to Azure Container App
-
 on:
   push:
     paths:
       - 'src/backend/**'
     branches:
       - main
-
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
     env:
-      AZURE_CONTAINER_APP_NAME: jouw-containerapp-naam
-      AZURE_RESOURCE_GROUP: jouw-resourcegroup-naam
+      AZURE_CONTAINER_APP_NAME: camar01
+      AZURE_RESOURCE_GROUP: SomcAI-Project-RG
       AZURE_REGION: westeurope
       DOCKERFILE_PATH: src/backend/Dockerfile.azure
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
-
       - name: Login to Azure
         uses: azure/login@v1
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
-
       - name: Build and Push Docker image
         uses: azure/container-apps-deploy-action@v1
         with:
@@ -32,5 +27,5 @@ jobs:
           resourceGroup: ${{ env.AZURE_RESOURCE_GROUP }}
           imageToBuild: ${{ github.repository }}:${{ github.sha }}
           dockerfilePath: ${{ env.DOCKERFILE_PATH }}
-          registryUrl: ghcr.io
+          registryUrl: somcaimariacreg.azurecr.io
           location: ${{ env.AZURE_REGION }}
