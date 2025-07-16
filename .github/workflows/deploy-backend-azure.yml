@@ -1,10 +1,13 @@
 name: Deploy Backend to Azure Container App
+
 on:
   push:
-    paths:
-      - 'src/backend/**'
     branches:
       - main
+    paths:
+      - 'src/backend/**'
+  workflow_dispatch:
+
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
@@ -16,16 +19,18 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
-      - name: Login to Azure
+
+      - name: Log in to Azure
         uses: azure/login@v1
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
-      - name: Build and Push Docker image
+
+      - name: Build and push image to ACR
         uses: azure/container-apps-deploy-action@v1
         with:
           appName: ${{ env.AZURE_CONTAINER_APP_NAME }}
           resourceGroup: ${{ env.AZURE_RESOURCE_GROUP }}
           imageToBuild: ${{ github.repository }}:${{ github.sha }}
           dockerfilePath: ${{ env.DOCKERFILE_PATH }}
-          registryUrl: somcaimariacreg.azurecr.io
+          registryUrl: ${{ secrets.ACR_LOGIN_SERVER }}
           location: ${{ env.AZURE_REGION }}
