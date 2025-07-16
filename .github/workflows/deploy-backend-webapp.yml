@@ -1,5 +1,4 @@
 name: Deploy Backend to Azure App Service
-
 on:
   push:
     branches:
@@ -7,18 +6,15 @@ on:
     paths:
       - 'src/backend/**'
   workflow_dispatch:
-
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-
-      - name: Deploy to Azure Web App
-        uses: azure/webapps-deploy@v2
-        with:
-          app-name: aiagentsgov
-          publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_BACKEND }}
-          package: ./src/backend
+    - name: Checkout code
+      uses: actions/checkout@v3
+    - name: Deploy to Azure Web App
+      uses: azure/webapps-deploy@v2
+      with:
+        app-name: aiagentsgov-backend
+        publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_BACKEND }}
+        package: ./src/backend
