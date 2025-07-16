@@ -27,11 +27,17 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      - name: Zip only app files (flat structure)
+      - name: Prepare flat structure for deployment
         run: |
           mkdir upload
-          cp -r *.py requirements.txt azure.yaml upload/
-          zip -r release.zip upload
+          cp *.py requirements.txt azure.yaml upload/
+
+      - name: Create flat release.zip
+        run: |
+          mkdir final
+          cp upload/* final/
+          cd final
+          zip -r ../release.zip .
 
       - name: Bekijk inhoud van ZIP-bestand
         run: unzip -l release.zip
