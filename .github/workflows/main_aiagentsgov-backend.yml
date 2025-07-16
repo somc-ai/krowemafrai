@@ -33,6 +33,9 @@ jobs:
           cp -r *.py requirements.txt azure.yaml upload/
           zip -r release.zip upload
 
+      - name: Bekijk inhoud van ZIP-bestand
+        run: unzip -l release.zip
+
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
