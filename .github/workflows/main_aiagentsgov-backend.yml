@@ -30,7 +30,10 @@ jobs:
       - name: Voeg azure.yaml toe aan ZIP-root
         run: cp azure.yaml ./  # nodig voor correcte detectie door Oryx
 
-      - name: Zip artifact for deployment (inclusief azure.yaml)
+      - name: Maak startup.txt met startup command voor Azure
+        run: echo "gunicorn -w 1 -k uvicorn.workers.UvicornWorker app_kernel:app" > startup.txt
+
+      - name: Zip artifact for deployment (incl. azure.yaml + startup.txt)
         run: zip -r release.zip . -x "venv/*" ".git/*" "*.zip"
 
       - name: Upload artifact
