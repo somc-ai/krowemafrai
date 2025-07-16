@@ -27,8 +27,11 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      - name: Zip artifact for deployment
-        run: zip -r release.zip . -x "venv/*" ".git/*" "*.zip"
+      - name: Zip only app files (flat structure)
+        run: |
+          mkdir upload
+          cp -r *.py requirements.txt azure.yaml upload/
+          zip -r release.zip upload
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
