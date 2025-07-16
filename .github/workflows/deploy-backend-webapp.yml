@@ -1,4 +1,10 @@
 name: Deploy Backend to Azure App Service
+  uses: azure/webapps-deploy@v2
+  with:
+    app-name: aiagentsgov-backend 
+    publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_BACKEND }}
+    package: ./src/backend
+  
 on:
   push:
     branches:
