@@ -1,3 +1,7 @@
+from fastapi import FastAPI
+
+app = FastAPI()
+
 import sys
 import os
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
@@ -981,5 +985,4 @@ async def get_agent_tools():
 # Run the app
 if __name__ == "__main__":
     import uvicorn
-
-    uvicorn.run("app_kernel:app", host="127.0.0.1", port=8000, reload=True)
+    uvicorn.run("app_kernel:app", host="0.0.0.0", port=8000)
