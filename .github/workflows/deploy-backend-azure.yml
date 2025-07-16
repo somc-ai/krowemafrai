@@ -14,8 +14,9 @@ jobs:
     env:
       AZURE_CONTAINER_APP_NAME: camar01
       AZURE_RESOURCE_GROUP: SomcAI-Project-RG
-      AZURE_REGION: westeurope
+      AZURE_REGION: swedencentral
       DOCKERFILE_PATH: src/backend/Dockerfile.azure
+      REGISTRY_LOGIN_SERVER: somcregistrysweden.azurecr.io
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -30,7 +31,7 @@ jobs:
         with:
           appName: ${{ env.AZURE_CONTAINER_APP_NAME }}
           resourceGroup: ${{ env.AZURE_RESOURCE_GROUP }}
-          imageToBuild: ${{ github.repository }}:${{ github.sha }}
+          imageToBuild: ${{ env.REGISTRY_LOGIN_SERVER }}/backend:${{ github.sha }}
           dockerfilePath: ${{ env.DOCKERFILE_PATH }}
-          registryUrl: ${{ secrets.ACR_LOGIN_SERVER }}
+          registryUrl: ${{ env.REGISTRY_LOGIN_SERVER }}
           location: ${{ env.AZURE_REGION }}
