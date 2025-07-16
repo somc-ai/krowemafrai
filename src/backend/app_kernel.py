@@ -64,7 +64,12 @@ logging.getLogger("azure.monitor.opentelemetry.exporter.export._base").setLevel(
 )
 
 # Initialize the FastAPI app
-app = FastAPI()
+app = FastAPI(
+    title="SoMC Agents",
+    docs_url="/docs",
+    redoc_url="/redoc",
+    openapi_url="/openapi.json"
+)
 
 frontend_url = Config.FRONTEND_SITE_NAME
 
