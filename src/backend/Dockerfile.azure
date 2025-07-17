@@ -1,15 +1,15 @@
-# Dockerfile voor Azure Container Apps – zonder mount-commando's
+# Dockerfile for Azure Container Apps - robust fallback approach
 
 FROM mcr.microsoft.com/devcontainers/python:3.11-bullseye AS base
 WORKDIR /app
 
-# Dependencies installeren
-COPY uv.lock pyproject.toml /app/
+# Copy all source files
 COPY . /app
-RUN pip install uv && \
-    uv sync --frozen --no-install-project --no-dev && \
-    uv sync --frozen --no-dev
+
+# Install dependencies using requirements.txt which is more reliable
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
 
 EXPOSE 8000
 
-CMD ["uv", "run", "uvicorn", "app_kernel:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn", "app_kernel:app", "--host", "0.0.0.0", "--port", "8000"]
