@@ -2,25 +2,13 @@
 fastapi
 uvicorn[standard]
 
-# Azure SDK’s
+# Azure SDK's (basis)
 azure-cosmos
-azure-monitor-opentelemetry
-azure-monitor-events-extension
 azure-identity
-
-# Env en multipart support
 python-dotenv
 python-multipart
 
-# OpenTelemetry observability
-opentelemetry-api
-opentelemetry-sdk
-opentelemetry-exporter-otlp-proto-grpc
-opentelemetry-exporter-otlp-proto-http
-opentelemetry-instrumentation-fastapi
-opentelemetry-instrumentation-openai
-
-# AI-integraties
+# AI-integraties (basis)
 semantic-kernel[azure]==1.32.2
 azure-ai-projects==1.0.0b11
 azure-ai-inference==1.0.0b9
