@@ -5,11 +5,8 @@ platformVersion: 3.11
 services:
   backend:
     project: src/backend
-    host: containerapp
+    host: webapp
     language: python
-    docker:
-      path: src/backend/Dockerfile.azure
-      context: src/backend
     env:
       - name: AZURE_OPENAI_ENDPOINT
         value: "${AZURE_OPENAI_ENDPOINT}"
