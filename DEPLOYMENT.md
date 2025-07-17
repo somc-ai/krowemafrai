@@ -9,6 +9,7 @@
 4. **✅ Docker configuration**: Updated Dockerfile.azure to be more robust with fallback mechanisms
 5. **✅ Environment setup**: Created proper .env configuration templates
 6. **✅ Azure deployment**: Updated azure.yaml with complete service configuration
+7. **✅ Frontend API URL**: Fixed hardcoded localhost URL to use environment variables
 
 ### Current Status:
 - ✅ **Backend application**: Starts successfully without errors
@@ -16,6 +17,7 @@
 - ✅ **Docker builds**: Dockerfile.azure uses robust pip fallback approach
 - ✅ **GitHub Actions**: Deployment workflows are ready for automatic deployment
 - ✅ **Environment configuration**: Proper .env templates created (not committed for security)
+- ✅ **Frontend API connection**: Now uses configurable URL instead of hardcoded localhost
 
 ## 🚀 Deployment Options
 
@@ -29,6 +31,7 @@ The repository has GitHub Actions workflows configured for automatic deployment:
 
 2. **Frontend deployment** (`main_aiagentsgov.yml`):
    - Deploys Node.js frontend to Azure Web App `aiagentsgov`
+   - **Now properly configured** with production API URL during build
 
 **To deploy**: Merge this PR to main branch and the workflows will automatically deploy.
 
@@ -82,6 +85,18 @@ AZURE_AI_RESOURCE_GROUP=your-resource-group
 AZURE_AI_PROJECT_NAME=your-project-name
 BACKEND_API_URL=http://localhost:8000
 FRONTEND_SITE_NAME=http://127.0.0.1:3000
+```
+
+### Frontend API URL Configuration:
+The frontend now uses environment variables to configure the backend API URL:
+- **Production builds**: Set `VITE_API_URL` in the GitHub Actions workflow
+- **Development**: Uses `http://127.0.0.1:8000` as fallback
+- **Custom deployments**: Set `VITE_API_URL` or `REACT_APP_API_URL` environment variables
+
+Example for local development:
+```bash
+# src/frontend/.env (not committed)
+VITE_API_URL=http://localhost:8000
 ```
 
 ## 📋 Next Steps
