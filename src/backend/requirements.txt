@@ -29,10 +29,6 @@ azure-ai-evaluation
 openai==1.84.0
 
 # Testtools
-pytest>=8.2,<9     # compatibel met asyncio
+pytest>=8.2,<9
 pytest-asyncio==0.24.0
 pytest-cov==5.0.0
-
-git add requirements.txt
-git commit -m "Trigger rebuild: uvicorn fix"
-git push
