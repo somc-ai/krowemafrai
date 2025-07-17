@@ -44,7 +44,7 @@ export default defineConfig({
     },
 
     // Environment variables configuration
-    envPrefix: 'REACT_APP_',
+    envPrefix: ['VITE_', 'REACT_APP_'],
 
     // Define global constants
     define: {

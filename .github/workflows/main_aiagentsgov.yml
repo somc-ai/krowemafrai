@@ -20,6 +20,8 @@ jobs:
 
       - name: npm install and build
         working-directory: ./src/frontend
+        env:
+          VITE_API_URL: https://camar01.proudpebble-d7f9c61f.swedencentral.azurecontainerapps.io
         run: |
           npm install
           npm run build
