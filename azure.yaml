@@ -1,4 +1,4 @@
-name: multi-agent-custom-automation-engine
+name: backend-only-deployment
 platform: python
 platformVersion: 3.11
 
@@ -33,30 +33,3 @@ services:
         value: "${AZURE_AI_RESOURCE_GROUP}"
       - name: AZURE_AI_PROJECT_NAME
         value: "${AZURE_AI_PROJECT_NAME}"
-
-  frontend:
-    project: src/frontend
-    host: containerapp
-    language: python
-    docker:
-      path: src/frontend/Dockerfile
-      context: src/frontend
-
-infra:
-  path: infra
-  provider: bicep
-  parameters:
-    - name: useWafAlignedArchitecture
-      value: false
-    - name: solutionPrefix
-      value: "macae-${AZURE_ENV_NAME}"
-    - name: solutionLocation
-      value: "${AZURE_LOCATION}"
-    - name: aiDeploymentsLocation
-      value: "${AZURE_LOCATION}"
-    - name: gptModelName
-      value: "gpt-4"
-    - name: gptModelVersion
-      value: "2024-08-06"
-    - name: gptModelCapacity
-      value: 150
