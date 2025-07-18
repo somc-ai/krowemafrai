@@ -2,12 +2,17 @@
 # More GitHub Actions for Azure: https://github.com/Azure/actions
 # More info on Python, GitHub Actions, and Azure App Service: https://aka.ms/python-webapps-actions
 
-name: Build and deploy Python app to Azure Web App - BackendAIGovNieuw
+# DEPRECATED: This workflow deploys to Azure App Service (Web App)
+# The new preferred deployment method is using Azure Container Apps
+# See: deploy-zeeland-backend-containerapp.yml
+
+name: [DEPRECATED] Build and deploy Python app to Azure Web App - BackendAIGovNieuw
 
 on:
-  push:
-    branches:
-      - main
+  # Disabled automatic triggers - manual dispatch only
+  # push:
+  #   branches:
+  #     - main
   workflow_dispatch:
 
 jobs:

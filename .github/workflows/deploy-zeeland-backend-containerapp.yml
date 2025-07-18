@@ -1,0 +1,108 @@
+name: Deploy Zeeland Backend to Azure Container App
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'zeeland-autogen-backend/**'
+  workflow_dispatch:
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    env:
+      AZURE_CONTAINER_APP_NAME: BackendAIGovNieuw
+      AZURE_RESOURCE_GROUP: aiagentsgov_group
+      AZURE_REGION: westeurope
+      DOCKERFILE_PATH: zeeland-autogen-backend/Dockerfile.azure
+      REGISTRY_LOGIN_SERVER: somcregistry.azurecr.io
+      IMAGE_NAME: zeeland-backend
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Log in to Azure
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Log in to Azure Container Registry
+        uses: azure/docker-login@v2
+        with:
+          login-server: ${{ env.REGISTRY_LOGIN_SERVER }}
+          username: ${{ secrets.ACR_USERNAME }}
+          password: ${{ secrets.ACR_PASSWORD }}
+
+      - name: Build and push Docker image
+        run: |
+          # Build the Docker image with trusted hosts for pip
+          docker build -t ${{ env.REGISTRY_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ github.sha }} -f ${{ env.DOCKERFILE_PATH }} ./zeeland-autogen-backend
+          docker build -t ${{ env.REGISTRY_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:latest -f ${{ env.DOCKERFILE_PATH }} ./zeeland-autogen-backend
+          
+          # Push the images to ACR
+          docker push ${{ env.REGISTRY_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+          docker push ${{ env.REGISTRY_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:latest
+
+      - name: Check if Container App exists
+        id: check_app
+        run: |
+          if az containerapp show --name ${{ env.AZURE_CONTAINER_APP_NAME }} --resource-group ${{ env.AZURE_RESOURCE_GROUP }} > /dev/null 2>&1; then
+            echo "app_exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "app_exists=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create Container App Environment (if needed)
+        if: steps.check_app.outputs.app_exists == 'false'
+        run: |
+          # Create Container App Environment if it doesn't exist
+          if ! az containerapp env show --name "${{ env.AZURE_CONTAINER_APP_NAME }}-env" --resource-group ${{ env.AZURE_RESOURCE_GROUP }} > /dev/null 2>&1; then
+            echo "Creating Container App Environment..."
+            az containerapp env create \
+              --name "${{ env.AZURE_CONTAINER_APP_NAME }}-env" \
+              --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+              --location ${{ env.AZURE_REGION }}
+          fi
+
+      - name: Create or Update Container App
+        run: |
+          if [ "${{ steps.check_app.outputs.app_exists }}" = "true" ]; then
+            echo "Updating existing Container App..."
+            az containerapp update \
+              --name ${{ env.AZURE_CONTAINER_APP_NAME }} \
+              --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+              --image ${{ env.REGISTRY_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+          else
+            echo "Creating new Container App..."
+            az containerapp create \
+              --name ${{ env.AZURE_CONTAINER_APP_NAME }} \
+              --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+              --environment "${{ env.AZURE_CONTAINER_APP_NAME }}-env" \
+              --image ${{ env.REGISTRY_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ github.sha }} \
+              --target-port 8000 \
+              --ingress external \
+              --registry-server ${{ env.REGISTRY_LOGIN_SERVER }} \
+              --cpu 0.25 \
+              --memory 0.5Gi \
+              --min-replicas 1 \
+              --max-replicas 3
+          fi
+
+      - name: Get Container App URL
+        id: get_url
+        run: |
+          FQDN=$(az containerapp show --name ${{ env.AZURE_CONTAINER_APP_NAME }} --resource-group ${{ env.AZURE_RESOURCE_GROUP }} --query properties.configuration.ingress.fqdn -o tsv)
+          echo "app_url=https://$FQDN" >> $GITHUB_OUTPUT
+          echo "App URL: https://$FQDN"
+
+      - name: Verify deployment
+        run: |
+          echo "✅ Deployment completed successfully!"
+          echo "📱 App Name: ${{ env.AZURE_CONTAINER_APP_NAME }}"
+          echo "🖼️ Image: ${{ env.REGISTRY_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ github.sha }}"
+          echo "📦 Resource Group: ${{ env.AZURE_RESOURCE_GROUP }}"
+          echo "🌍 Region: ${{ env.AZURE_REGION }}"
+          echo "🔗 App URL: ${{ steps.get_url.outputs.app_url }}"
+          echo "🩺 Health Check: ${{ steps.get_url.outputs.app_url }}/health"
