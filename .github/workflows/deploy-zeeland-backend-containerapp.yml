@@ -1,3 +1,4 @@
+---
 name: Deploy Zeeland Backend to Azure Container App
 
 on:
@@ -37,18 +38,28 @@ jobs:
 
       - name: Build and push Docker image
         run: |
+          # Set shorter variable names for readability
+          REGISTRY=${{ env.REGISTRY_LOGIN_SERVER }}
+          IMAGE=${{ env.IMAGE_NAME }}
+          SHA=${{ github.sha }}
+
           # Build the Docker image with trusted hosts for pip
-          docker build -t ${{ env.REGISTRY_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ github.sha }} -f ${{ env.DOCKERFILE_PATH }} ./zeeland-autogen-backend
-          docker build -t ${{ env.REGISTRY_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:latest -f ${{ env.DOCKERFILE_PATH }} ./zeeland-autogen-backend
-          
+          docker build -t $REGISTRY/$IMAGE:$SHA \
+            -f ${{ env.DOCKERFILE_PATH }} ./zeeland-autogen-backend
+          docker build -t $REGISTRY/$IMAGE:latest \
+            -f ${{ env.DOCKERFILE_PATH }} ./zeeland-autogen-backend
+
           # Push the images to ACR
-          docker push ${{ env.REGISTRY_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
-          docker push ${{ env.REGISTRY_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:latest
+          docker push $REGISTRY/$IMAGE:$SHA
+          docker push $REGISTRY/$IMAGE:latest
 
       - name: Check if Container App exists
         id: check_app
         run: |
-          if az containerapp show --name ${{ env.AZURE_CONTAINER_APP_NAME }} --resource-group ${{ env.AZURE_RESOURCE_GROUP }} > /dev/null 2>&1; then
+          if az containerapp show \
+              --name ${{ env.AZURE_CONTAINER_APP_NAME }} \
+              --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+              > /dev/null 2>&1; then
             echo "app_exists=true" >> $GITHUB_OUTPUT
           else
             echo "app_exists=false" >> $GITHUB_OUTPUT
@@ -58,7 +69,10 @@ jobs:
         if: steps.check_app.outputs.app_exists == 'false'
         run: |
           # Create Container App Environment if it doesn't exist
-          if ! az containerapp env show --name "${{ env.AZURE_CONTAINER_APP_NAME }}-env" --resource-group ${{ env.AZURE_RESOURCE_GROUP }} > /dev/null 2>&1; then
+          if ! az containerapp env show \
+                --name "${{ env.AZURE_CONTAINER_APP_NAME }}-env" \
+                --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+                > /dev/null 2>&1; then
             echo "Creating Container App Environment..."
             az containerapp env create \
               --name "${{ env.AZURE_CONTAINER_APP_NAME }}-env" \
@@ -68,22 +82,28 @@ jobs:
 
       - name: Create or Update Container App
         run: |
+          REGISTRY=${{ env.REGISTRY_LOGIN_SERVER }}
+          IMAGE=${{ env.IMAGE_NAME }}
+          SHA=${{ github.sha }}
+          APP_NAME=${{ env.AZURE_CONTAINER_APP_NAME }}
+          RG=${{ env.AZURE_RESOURCE_GROUP }}
+
           if [ "${{ steps.check_app.outputs.app_exists }}" = "true" ]; then
             echo "Updating existing Container App..."
             az containerapp update \
-              --name ${{ env.AZURE_CONTAINER_APP_NAME }} \
-              --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
-              --image ${{ env.REGISTRY_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+              --name $APP_NAME \
+              --resource-group $RG \
+              --image $REGISTRY/$IMAGE:$SHA
           else
             echo "Creating new Container App..."
             az containerapp create \
-              --name ${{ env.AZURE_CONTAINER_APP_NAME }} \
-              --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
-              --environment "${{ env.AZURE_CONTAINER_APP_NAME }}-env" \
-              --image ${{ env.REGISTRY_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ github.sha }} \
+              --name $APP_NAME \
+              --resource-group $RG \
+              --environment "$APP_NAME-env" \
+              --image $REGISTRY/$IMAGE:$SHA \
               --target-port 8000 \
               --ingress external \
-              --registry-server ${{ env.REGISTRY_LOGIN_SERVER }} \
+              --registry-server $REGISTRY \
               --cpu 0.25 \
               --memory 0.5Gi \
               --min-replicas 1 \
@@ -93,7 +113,10 @@ jobs:
       - name: Get Container App URL
         id: get_url
         run: |
-          FQDN=$(az containerapp show --name ${{ env.AZURE_CONTAINER_APP_NAME }} --resource-group ${{ env.AZURE_RESOURCE_GROUP }} --query properties.configuration.ingress.fqdn -o tsv)
+          FQDN=$(az containerapp show \
+            --name ${{ env.AZURE_CONTAINER_APP_NAME }} \
+            --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+            --query properties.configuration.ingress.fqdn -o tsv)
           echo "app_url=https://$FQDN" >> $GITHUB_OUTPUT
           echo "App URL: https://$FQDN"
 
@@ -101,7 +124,10 @@ jobs:
         run: |
           echo "✅ Deployment completed successfully!"
           echo "📱 App Name: ${{ env.AZURE_CONTAINER_APP_NAME }}"
-          echo "🖼️ Image: ${{ env.REGISTRY_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ github.sha }}"
+          REGISTRY=${{ env.REGISTRY_LOGIN_SERVER }}
+          IMAGE_NAME=${{ env.IMAGE_NAME }}
+          SHA=${{ github.sha }}
+          echo "🖼️ Image: $REGISTRY/$IMAGE_NAME:$SHA"
           echo "📦 Resource Group: ${{ env.AZURE_RESOURCE_GROUP }}"
           echo "🌍 Region: ${{ env.AZURE_REGION }}"
           echo "🔗 App URL: ${{ steps.get_url.outputs.app_url }}"
