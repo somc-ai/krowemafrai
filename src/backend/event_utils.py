@@ -1,6 +1,13 @@
 import logging
 import os
-from azure.monitor.events.extension import track_event
+
+# Optional Azure Monitor import
+try:
+    from azure.monitor.events.extension import track_event
+    azure_events_available = True
+except ImportError:
+    logging.warning("Azure Monitor events extension not available. Event tracking will be disabled.")
+    azure_events_available = False
 
 
 def track_event_if_configured(event_name: str, event_data: dict):
@@ -13,12 +20,16 @@ def track_event_if_configured(event_name: str, event_data: dict):
         event_name: The name of the event to track
         event_data: Dictionary of event data/dimensions
     """
+    if not azure_events_available:
+        logging.debug(f"Event tracking disabled: {event_name} with data {event_data}")
+        return
+        
     try:
         instrumentation_key = os.getenv("APPLICATIONINSIGHTS_CONNECTION_STRING")
         if instrumentation_key:
             track_event(event_name, event_data)
         else:
-            logging.warning(
+            logging.debug(
                 f"Skipping track_event for {event_name} as Application Insights is not configured"
             )
     except AttributeError as e:

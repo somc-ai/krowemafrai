@@ -1,5 +1,6 @@
 fastapi
 uvicorn[standard]
+gunicorn
 
 # Azure SDK's
 azure-cosmos

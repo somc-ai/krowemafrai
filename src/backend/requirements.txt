@@ -1,6 +1,7 @@
 # Webframework en server
 fastapi
 uvicorn[standard]
+gunicorn
 
 # Azure SDK's (basis)
 azure-cosmos
