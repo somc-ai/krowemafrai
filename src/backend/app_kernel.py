@@ -16,8 +16,13 @@ from typing import Dict, List, Optional
 from app_config import config
 from auth.auth_utils import get_authenticated_user_details
 
-# Azure monitoring
-from azure.monitor.opentelemetry import configure_azure_monitor
+# Azure monitoring - optional import
+try:
+    from azure.monitor.opentelemetry import configure_azure_monitor
+    azure_monitor_available = True
+except ImportError:
+    logging.warning("Azure Monitor OpenTelemetry not available. Monitoring features will be disabled.")
+    azure_monitor_available = False
 from config_kernel import Config
 from event_utils import track_event_if_configured
 
@@ -43,16 +48,19 @@ from utils_kernel import initialize_runtime_and_context, rai_success
 
 # Check if the Application Insights Instrumentation Key is set in the environment variables
 connection_string = os.getenv("APPLICATIONINSIGHTS_CONNECTION_STRING")
-if connection_string:
-    # Configure Application Insights if the Instrumentation Key is found
-    configure_azure_monitor(connection_string=connection_string)
-    logging.info(
-        "Application Insights configured with the provided Instrumentation Key"
-    )
+if connection_string and azure_monitor_available:
+    try:
+        # Configure Application Insights if the Instrumentation Key is found
+        configure_azure_monitor(connection_string=connection_string)
+        logging.info(
+            "Application Insights configured with the provided Instrumentation Key"
+        )
+    except Exception as e:
+        logging.warning("Failed to configure Azure Monitor: %s", e)
 else:
     # Log a warning if the Instrumentation Key is not found
     logging.warning(
-        "No Application Insights Instrumentation Key found. Skipping configuration"
+        "No Application Insights Instrumentation Key found or Azure Monitor not available. Skipping configuration"
     )
 
 # Configure logging
@@ -91,6 +99,12 @@ app.add_middleware(
 # Configure health check
 app.add_middleware(HealthCheckMiddleware, password="", checks={})
 logging.info("Added health check middleware")
+
+
+@app.get("/")
+async def root():
+    """Root endpoint for basic health check"""
+    return {"status": "ok", "message": "SoMC Agents API is running"}
 
 
 @app.post("/api/input_task")

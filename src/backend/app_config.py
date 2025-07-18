@@ -29,13 +29,13 @@ class AppConfig:
         self.COSMOSDB_CONTAINER = self._get_optional("COSMOSDB_CONTAINER")
 
         # Azure OpenAI settings
-        self.AZURE_OPENAI_DEPLOYMENT_NAME = self._get_required(
+        self.AZURE_OPENAI_DEPLOYMENT_NAME = self._get_optional(
             "AZURE_OPENAI_DEPLOYMENT_NAME", "gpt-4o"
         )
-        self.AZURE_OPENAI_API_VERSION = self._get_required(
+        self.AZURE_OPENAI_API_VERSION = self._get_optional(
             "AZURE_OPENAI_API_VERSION", "2024-11-20"
         )
-        self.AZURE_OPENAI_ENDPOINT = self._get_required("AZURE_OPENAI_ENDPOINT")
+        self.AZURE_OPENAI_ENDPOINT = self._get_optional("AZURE_OPENAI_ENDPOINT", "")
         self.AZURE_OPENAI_SCOPES = [
             f"{self._get_optional('AZURE_OPENAI_SCOPE', 'https://cognitiveservices.azure.com/.default')}"
         ]
@@ -46,10 +46,10 @@ class AppConfig:
         )
 
         # Azure AI settings
-        self.AZURE_AI_SUBSCRIPTION_ID = self._get_required("AZURE_AI_SUBSCRIPTION_ID")
-        self.AZURE_AI_RESOURCE_GROUP = self._get_required("AZURE_AI_RESOURCE_GROUP")
-        self.AZURE_AI_PROJECT_NAME = self._get_required("AZURE_AI_PROJECT_NAME")
-        self.AZURE_AI_AGENT_ENDPOINT = self._get_required("AZURE_AI_AGENT_ENDPOINT")
+        self.AZURE_AI_SUBSCRIPTION_ID = self._get_optional("AZURE_AI_SUBSCRIPTION_ID", "")
+        self.AZURE_AI_RESOURCE_GROUP = self._get_optional("AZURE_AI_RESOURCE_GROUP", "")
+        self.AZURE_AI_PROJECT_NAME = self._get_optional("AZURE_AI_PROJECT_NAME", "")
+        self.AZURE_AI_AGENT_ENDPOINT = self._get_optional("AZURE_AI_AGENT_ENDPOINT", "")
 
         # Cached clients and resources
         self._azure_credentials = None
@@ -127,8 +127,12 @@ class AppConfig:
         """Get a Cosmos DB client for the configured database.
 
         Returns:
-            A Cosmos DB database client
+            A Cosmos DB database client or None if not configured
         """
+        if not self.COSMOSDB_ENDPOINT:
+            logging.warning("CosmosDB endpoint not configured. CosmosDB features will be disabled.")
+            return None
+            
         try:
             if self._cosmos_client is None:
                 self._cosmos_client = CosmosClient(
@@ -143,10 +147,10 @@ class AppConfig:
             return self._cosmos_database
         except Exception as exc:
             logging.error(
-                "Failed to create CosmosDB client: %s. CosmosDB is required for this application.",
+                "Failed to create CosmosDB client: %s. CosmosDB features will be disabled.",
                 exc,
             )
-            raise
+            return None
 
     def create_kernel(self):
         """Creates a new Semantic Kernel instance.
@@ -163,25 +167,28 @@ class AppConfig:
         """Create and return an AIProjectClient for Azure AI Foundry using from_connection_string.
 
         Returns:
-            An AIProjectClient instance
+            An AIProjectClient instance or None if not configured
         """
         if self._ai_project_client is not None:
             return self._ai_project_client
 
+        if not self.AZURE_AI_AGENT_ENDPOINT:
+            logging.warning("Azure AI Agent endpoint not configured. AI Project features will be disabled.")
+            return None
+
         try:
             credential = self.get_azure_credentials()
             if credential is None:
-                raise RuntimeError(
-                    "Unable to acquire Azure credentials; ensure DefaultAzureCredential is configured"
-                )
+                logging.warning("Unable to acquire Azure credentials. AI Project features will be disabled.")
+                return None
 
             endpoint = self.AZURE_AI_AGENT_ENDPOINT
             self._ai_project_client = AIProjectClient(endpoint=endpoint, credential=credential)
 
             return self._ai_project_client
         except Exception as exc:
-            logging.error("Failed to create AIProjectClient: %s", exc)
-            raise
+            logging.error("Failed to create AIProjectClient: %s. AI Project features will be disabled.", exc)
+            return None
 
 
 # Create a global instance of AppConfig
