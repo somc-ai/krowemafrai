@@ -79,12 +79,14 @@ jobs:
               --registry-server ${{ env.REGISTRY_LOGIN_SERVER }} \
               --env-vars \
                 PORT=8000 \
-                AZURE_OPENAI_ENDPOINT=secretref:azure-openai-endpoint \
-                AZURE_OPENAI_DEPLOYMENT_NAME=secretref:azure-openai-deployment \
-                AZURE_OPENAI_API_VERSION=secretref:azure-openai-version \
-                COSMOSDB_ENDPOINT=secretref:cosmosdb-endpoint \
-                COSMOSDB_DATABASE=macae \
-                COSMOSDB_CONTAINER=memory
+                AZURE_OPENAI_ENDPOINT="https://somc-ai-autogen.openai.azure.com/" \
+                AZURE_AI_SUBSCRIPTION_ID="05cc117e-29ea-49f3-9428-c5d042340a91" \
+                AZURE_AI_RESOURCE_GROUP="rg-info-2259" \
+                AZURE_AI_PROJECT_NAME="SoMC-AI-AutoGen" \
+                AZURE_AI_AGENT_ENDPOINT="https://somc-ai-autogen.openai.azure.com/" \
+                ENVIRONMENT="production" \
+                AZURE_OPENAI_DEPLOYMENT_NAME="gpt-4o" \
+                AZURE_OPENAI_API_VERSION="2024-02-01"
           fi
 
       - name: Get Container App URL
