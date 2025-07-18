@@ -19,7 +19,7 @@ jobs:
       - name: Set up Python version
         uses: actions/setup-python@v5
         with:
-          python-version: '3.13'
+          python-version: '3.11'
 
       - name: Create and start virtual environment
         run: |
@@ -27,12 +27,27 @@ jobs:
           source venv/bin/activate
       
       - name: Install dependencies
-        run: pip install -r requirements.txt
+        run: |
+          source venv/bin/activate
+          pip install --upgrade pip
+          pip install -r requirements.txt
+      
+      - name: Test if application starts
+        run: |
+          source venv/bin/activate
+          python -c "from main import app; print('App imported successfully')"
         
       # Optional: Add step to run tests here (PyTest, Django test suites, etc.)
 
+      - name: Create startup script for Azure
+        run: |
+          echo "#!/bin/bash" > startup.sh
+          echo "cd /home/site/wwwroot" >> startup.sh
+          echo "python -m uvicorn main:app --host 0.0.0.0 --port 8000" >> startup.sh
+          chmod +x startup.sh
+
       - name: Zip artifact for deployment
-        run: zip release.zip ./* -r
+        run: zip release.zip ./* -r -x "venv/*" ".git/*"
 
       - name: Upload artifact for deployment jobs
         uses: actions/upload-artifact@v4
