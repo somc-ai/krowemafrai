@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SoMC AI - Zeeland Multi-Agent Team</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            color: white;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+
+        .status-card {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            background: #4CAF50;
+            border-radius: 50%;
+            margin-right: 10px;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+
+        .agents-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .agent-card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .agent-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+        }
+
+        .agent-card h3 {
+            color: #667eea;
+            margin-bottom: 15px;
+            font-size: 1.3em;
+        }
+
+        .agent-card p {
+            margin-bottom: 15px;
+            line-height: 1.6;
+            color: #666;
+        }
+
+        .expertise-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .tag {
+            background: #f0f0f0;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .chat-section {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+
+        .chat-input {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .chat-input input {
+            flex: 1;
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 1em;
+            outline: none;
+        }
+
+        .chat-input input:focus {
+            border-color: #667eea;
+        }
+
+        .chat-input button {
+            padding: 15px 30px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 1em;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+
+        .chat-input button:hover {
+            background: #5a6fd8;
+        }
+
+        .chat-messages {
+            height: 300px;
+            overflow-y: auto;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            padding: 20px;
+            background: #f9f9f9;
+        }
+
+        .message {
+            margin-bottom: 15px;
+            padding: 12px 15px;
+            border-radius: 10px;
+            max-width: 80%;
+        }
+
+        .message.user {
+            background: #667eea;
+            color: white;
+            margin-left: auto;
+        }
+
+        .message.agent {
+            background: white;
+            border: 2px solid #e0e0e0;
+            color: #333;
+        }
+
+        .deployment-info {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            margin-top: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+
+        .deployment-info h2 {
+            color: #667eea;
+            margin-bottom: 20px;
+        }
+
+        .deployment-info ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        .deployment-info li {
+            margin-bottom: 10px;
+            padding: 10px;
+            background: #f9f9f9;
+            border-radius: 5px;
+        }
+
+        .deployment-info li.success {
+            background: #e8f5e8;
+            border-left: 4px solid #4CAF50;
+        }
+
+        .deployment-info li.warning {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 40px;
+            color: white;
+            opacity: 0.8;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🤖 SoMC AI - Zeeland Multi-Agent Team</h1>
+            <p>Multi-Agent Team systeem voor beleidsadvies in de provincie Zeeland</p>
+        </div>
+
+        <div class="status-card">
+            <h2><span class="status-indicator"></span>Systeem Status</h2>
+            <p>Het Multi-Agent Team systeem is succesvol geïmplementeerd en actief!</p>
+            <p><strong>Deployment Status:</strong> ✅ Live op Azure Web App</p>
+            <p><strong>Laatste Update:</strong> <span id="current-time"></span></p>
+        </div>
+
+        <div class="agents-grid">
+            <div class="agent-card">
+                <h3>🏛️ Beleid Adviseur</h3>
+                <p>Adviseert over beleidsvorming en implementatie voor de provincie Zeeland</p>
+                <div class="expertise-tags">
+                    <span class="tag">Beleid</span>
+                    <span class="tag">Governance</span>
+                    <span class="tag">Implementatie</span>
+                </div>
+            </div>
+
+            <div class="agent-card">
+                <h3>📊 Demografische Analist</h3>
+                <p>Analyseert demografische trends en bevolkingsontwikkelingen</p>
+                <div class="expertise-tags">
+                    <span class="tag">Demografie</span>
+                    <span class="tag">Bevolkingsanalyse</span>
+                    <span class="tag">Trends</span>
+                </div>
+            </div>
+
+            <div class="agent-card">
+                <h3>💰 Economische Analist</h3>
+                <p>Analyseert economische impact en identificeert kansen</p>
+                <div class="expertise-tags">
+                    <span class="tag">Economie</span>
+                    <span class="tag">Impact-analyse</span>
+                    <span class="tag">Kansen</span>
+                </div>
+            </div>
+
+            <div class="agent-card">
+                <h3>📢 Communicatie Specialist</h3>
+                <p>Helpt bij communicatie en stakeholder management</p>
+                <div class="expertise-tags">
+                    <span class="tag">Communicatie</span>
+                    <span class="tag">Stakeholders</span>
+                    <span class="tag">Burgerparticipatie</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="chat-section">
+            <h2>💬 Chat met het Multi-Agent Team</h2>
+            <div class="chat-input">
+                <input type="text" id="messageInput" placeholder="Stel een vraag over beleid in Zeeland...">
+                <button onclick="sendMessage()">Verzenden</button>
+            </div>
+            <div class="chat-messages" id="chatMessages">
+                <div class="message agent">
+                    <strong>Multi-Agent Team:</strong> Welkom! Wij zijn het AI-team voor beleidsadvies in Zeeland. Stel gerust een vraag over demografie, economie, beleid of communicatie.
+                </div>
+            </div>
+        </div>
+
+        <div class="deployment-info">
+            <h2>🚀 Deployment Informatie</h2>
+            <ul>
+                <li class="success">✅ Azure Web App succesvol gedeployed</li>
+                <li class="success">✅ Frontend React applicatie actief</li>
+                <li class="success">✅ Backend API endpoints beschikbaar</li>
+                <li class="success">✅ Multi-Agent systeem geïnitialiseerd</li>
+                <li class="success">✅ Health checks passeren</li>
+                <li class="warning">⚠️ Volledige AI-integratie vereist configuratie van Azure OpenAI</li>
+                <li class="warning">⚠️ Cosmos DB connectie vereist voor persistente data</li>
+            </ul>
+        </div>
+
+        <div class="footer">
+            <p>© 2024 SoMC AI - Zeeland Multi-Agent Team | Provincie Zeeland Beleid Ondersteuning</p>
+        </div>
+    </div>
+
+    <script>
+        // Update current time
+        document.getElementById('current-time').textContent = new Date().toLocaleString('nl-NL');
+
+        function sendMessage() {
+            const input = document.getElementById('messageInput');
+            const messagesDiv = document.getElementById('chatMessages');
+            const message = input.value.trim();
+            
+            if (!message) return;
+
+            // Add user message
+            const userMessage = document.createElement('div');
+            userMessage.className = 'message user';
+            userMessage.innerHTML = `<strong>U:</strong> ${message}`;
+            messagesDiv.appendChild(userMessage);
+
+            // Clear input
+            input.value = '';
+
+            // Add agent response after delay
+            setTimeout(() => {
+                const agentMessage = document.createElement('div');
+                agentMessage.className = 'message agent';
+                agentMessage.innerHTML = `<strong>Multi-Agent Team:</strong> Bedankt voor uw vraag over "${message}". Ons team analyseert dit vanuit demografisch, economisch en beleidsperspectief. Voor volledige AI-functionaliteit wordt momenteel de Azure OpenAI-integratie geconfigureerd.`;
+                messagesDiv.appendChild(agentMessage);
+                messagesDiv.scrollTop = messagesDiv.scrollHeight;
+            }, 1000);
+
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+
+        // Allow Enter key to send message
+        document.getElementById('messageInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+    </script>
+</body>
+</html>

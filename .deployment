@@ -1,2 +1,2 @@
 [config]
-project = src/backend
+command = python main.py
