@@ -1,0 +1,52 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Development
+.git/
+.gitignore
+*.md
+README*
+LICENSE
+tests/
+test_*
+*_test.py
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Azure
+.azure/
+azure.yaml
+
+# Large files
+*.zip
+*.tar.gz
+
+# Frontend (not needed in backend container)
+../frontend/
+../src/frontend/
+
+# GitHub workflows
+../../.github/
