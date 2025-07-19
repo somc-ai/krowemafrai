@@ -14,7 +14,7 @@ env:
   AZURE_RESOURCE_GROUP: rg-info-2259
   AZURE_LOCATION: westeurope
   DOCKERFILE_PATH: src/frontend/Dockerfile
-  REGISTRY_LOGIN_SERVER: somcregistry.azurecr.io
+  REGISTRY_LOGIN_SERVER: somcregistry-hec2c3cahcgxg8bb.azurecr.io
   IMAGE_NAME: frontend-aiagents-gov
 
 jobs:
