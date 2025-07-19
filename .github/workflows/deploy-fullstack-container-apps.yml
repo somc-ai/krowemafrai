@@ -11,7 +11,7 @@ on:
 env:
   AZURE_RESOURCE_GROUP: rg-info-2259
   AZURE_LOCATION: westeurope
-  REGISTRY_LOGIN_SERVER: somcregistry-hec2c3cahcgxg8bb.azurecr.io
+  REGISTRY_LOGIN_SERVER: ca2a76f03945acr.azurecr.io
   ENVIRONMENT_NAME: managedEnvironment-rginfo2259-8048
 
 jobs:
@@ -31,7 +31,7 @@ jobs:
 
       - name: Log in to Azure Container Registry
         run: |
-          az acr login --name somcregistry
+          az acr login --name ca2a76f03945acr
 
       - name: Build and push Backend Docker image
         run: |
@@ -108,7 +108,7 @@ jobs:
 
       - name: Log in to Azure Container Registry
         run: |
-          az acr login --name somcregistry
+          az acr login --name ca2a76f03945acr
 
       - name: Build and push Frontend Docker image
         run: |
