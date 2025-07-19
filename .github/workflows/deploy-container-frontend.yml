@@ -14,7 +14,7 @@ env:
   AZURE_RESOURCE_GROUP: rg-info-2259
   AZURE_LOCATION: westeurope
   DOCKERFILE_PATH: src/frontend/Dockerfile
-  REGISTRY_LOGIN_SERVER: somcregistrysweden.azurecr.io
+  REGISTRY_LOGIN_SERVER: somcregistry.azurecr.io
   IMAGE_NAME: frontend-aiagents-gov
 
 jobs:
@@ -32,7 +32,7 @@ jobs:
 
       - name: Log in to Azure Container Registry
         run: |
-          az acr login --name somcregistrysweden
+          az acr login --name somcregistry
 
       - name: Build and push Docker image
         run: |
