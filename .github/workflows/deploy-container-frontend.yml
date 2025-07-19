@@ -42,16 +42,8 @@ jobs:
 
       - name: Deploy to Azure Container Apps
         run: |
-          # Check if Container Apps environment exists
-          if ! az containerapp env show --name "container-env-${{ env.AZURE_RESOURCE_GROUP }}" --resource-group ${{ env.AZURE_RESOURCE_GROUP }} > /dev/null 2>&1; then
-            echo "Creating Container Apps environment..."
-            az containerapp env create \
-              --name "container-env-${{ env.AZURE_RESOURCE_GROUP }}" \
-              --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
-              --location ${{ env.AZURE_LOCATION }}
-          fi
-          
-          ENVIRONMENT_NAME="container-env-${{ env.AZURE_RESOURCE_GROUP }}"
+          # Use existing Container Apps environment
+          ENVIRONMENT_NAME="managedEnvironment-rginfo2259-8048"
           
           # Get backend Container App URL for API configuration
           BACKEND_FQDN=$(az containerapp show --name backend-aiagents-gov --resource-group ${{ env.AZURE_RESOURCE_GROUP }} --query "properties.configuration.ingress.fqdn" -o tsv 2>/dev/null || echo "")
