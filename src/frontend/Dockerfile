@@ -18,7 +18,7 @@ COPY . ./
 RUN npm run build
 
 # Stage 2: Python build environment with UV
-FROM mcr.microsoft.com/devcontainers/python:3.11-bullseye AS python-builder
+FROM mcr.microsoft.com/devcontainers/python:3.13-bullseye AS python-builder
 
 # Copy UV from official image
 COPY --from=ghcr.io/astral-sh/uv:0.6.3 /uv /uvx /bin/
@@ -40,7 +40,7 @@ RUN --mount=type=cache,target=/root/.cache/uv \
     fi
 
 # Stage 3: Final production image
-FROM python:3.11-slim-bullseye
+FROM python:3.13-slim-bullseye
 
 # Set production environment
 ENV NODE_ENV=production \
@@ -61,7 +61,7 @@ RUN adduser --disabled-password --gecos "" appuser && \
     chown -R appuser:appuser /app
 
 # Copy Python dependencies from builder
-COPY --from=python-builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
+COPY --from=python-builder /usr/local/lib/python3.13/site-packages /usr/local/lib/python3.13/site-packages
 COPY --from=python-builder /usr/local/bin /usr/local/bin
 
 # Copy React build artifacts

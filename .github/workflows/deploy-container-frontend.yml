@@ -1,21 +1,21 @@
-name: Deploy Backend to Azure Container Apps
+name: Deploy Frontend to Azure Container Apps
 
 on:
   push:
     branches:
       - main
     paths:
-      - 'src/backend/**'
-      - '.github/workflows/deploy-container-backend.yml'
+      - 'src/frontend/**'
+      - '.github/workflows/deploy-container-frontend.yml'
   workflow_dispatch:
 
 env:
-  AZURE_CONTAINER_APP_NAME: backend-aiagents-gov
+  AZURE_CONTAINER_APP_NAME: frontend-aiagents-gov
   AZURE_RESOURCE_GROUP: rg-info-2259
   AZURE_LOCATION: westeurope
-  DOCKERFILE_PATH: src/backend/Dockerfile.azure
+  DOCKERFILE_PATH: src/frontend/Dockerfile
   REGISTRY_LOGIN_SERVER: somcregistrysweden.azurecr.io
-  IMAGE_NAME: backend-aiagents-gov
+  IMAGE_NAME: frontend-aiagents-gov
 
 jobs:
   build-and-deploy:
@@ -36,7 +36,8 @@ jobs:
 
       - name: Build and push Docker image
         run: |
-          docker build -t ${{ env.REGISTRY_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ github.sha }} -f ${{ env.DOCKERFILE_PATH }} .
+          cd src/frontend
+          docker build -t ${{ env.REGISTRY_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ github.sha }} -f Dockerfile .
           docker push ${{ env.REGISTRY_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
 
       - name: Deploy to Azure Container Apps
@@ -52,6 +53,16 @@ jobs:
           
           ENVIRONMENT_NAME="container-env-${{ env.AZURE_RESOURCE_GROUP }}"
           
+          # Get backend Container App URL for API configuration
+          BACKEND_FQDN=$(az containerapp show --name backend-aiagents-gov --resource-group ${{ env.AZURE_RESOURCE_GROUP }} --query "properties.configuration.ingress.fqdn" -o tsv 2>/dev/null || echo "")
+          if [ -z "$BACKEND_FQDN" ]; then
+            echo "Warning: Backend Container App not found. Using localhost fallback."
+            BACKEND_URL="http://localhost:8000"
+          else
+            BACKEND_URL="https://$BACKEND_FQDN"
+          fi
+          echo "Using backend URL: $BACKEND_URL"
+          
           # Check if Container App exists
           if az containerapp show --name ${{ env.AZURE_CONTAINER_APP_NAME }} --resource-group ${{ env.AZURE_RESOURCE_GROUP }} > /dev/null 2>&1; then
             echo "Container App exists, updating..."
@@ -61,16 +72,9 @@ jobs:
               --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
               --image ${{ env.REGISTRY_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ github.sha }} \
               --set-env-vars \
-                PORT=8000 \
-                AZURE_OPENAI_ENDPOINT=https://somc-ai-autogen.openai.azure.com/ \
-                AZURE_OPENAI_DEPLOYMENT_NAME=gpt-4o \
-                AZURE_OPENAI_API_VERSION=2024-08-01-preview \
-                AZURE_AI_SUBSCRIPTION_ID=05cc117e-29ea-49f3-9428-c5d042340a91 \
-                AZURE_AI_RESOURCE_GROUP=rg-info-2259 \
-                AZURE_AI_PROJECT_NAME=ai-project-default \
-                AZURE_AI_AGENT_ENDPOINT=https://somc-ai-autogen.openai.azure.com/ \
-                BACKEND_API_URL=https://backend-aiagents-gov.westeurope-01.azurecontainerapps.io \
-                FRONTEND_SITE_NAME=https://frontend-aiagents-gov.westeurope-01.azurecontainerapps.io
+                PORT=3000 \
+                BACKEND_API_URL=$BACKEND_URL \
+                AUTH_ENABLED=false
           else
             echo "Container App does not exist, creating..."
             # Create Container App
@@ -79,27 +83,30 @@ jobs:
               --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
               --environment $ENVIRONMENT_NAME \
               --image ${{ env.REGISTRY_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ github.sha }} \
-              --target-port 8000 \
+              --target-port 3000 \
               --ingress external \
               --min-replicas 1 \
               --max-replicas 3 \
-              --cpu 1.0 \
-              --memory 2.0Gi \
+              --cpu 0.5 \
+              --memory 1.0Gi \
               --registry-server ${{ env.REGISTRY_LOGIN_SERVER }} \
               --env-vars \
-                PORT=8000 \
-                AZURE_OPENAI_ENDPOINT=https://somc-ai-autogen.openai.azure.com/ \
-                AZURE_OPENAI_DEPLOYMENT_NAME=gpt-4o \
-                AZURE_OPENAI_API_VERSION=2024-08-01-preview \
-                AZURE_AI_SUBSCRIPTION_ID=05cc117e-29ea-49f3-9428-c5d042340a91 \
-                AZURE_AI_RESOURCE_GROUP=rg-info-2259 \
-                AZURE_AI_PROJECT_NAME=ai-project-default \
-                AZURE_AI_AGENT_ENDPOINT=https://somc-ai-autogen.openai.azure.com/ \
-                BACKEND_API_URL=https://backend-aiagents-gov.westeurope-01.azurecontainerapps.io \
-                FRONTEND_SITE_NAME=https://frontend-aiagents-gov.westeurope-01.azurecontainerapps.io
+                PORT=3000 \
+                BACKEND_API_URL=$BACKEND_URL \
+                AUTH_ENABLED=false
           fi
           
           # Get the FQDN of the Container App
           FQDN=$(az containerapp show --name ${{ env.AZURE_CONTAINER_APP_NAME }} --resource-group ${{ env.AZURE_RESOURCE_GROUP }} --query "properties.configuration.ingress.fqdn" -o tsv)
-          echo "Container App deployed successfully!"
+          echo "Frontend Container App deployed successfully!"
           echo "URL: https://$FQDN"
+          
+          # Update backend with frontend URL
+          if az containerapp show --name backend-aiagents-gov --resource-group ${{ env.AZURE_RESOURCE_GROUP }} > /dev/null 2>&1; then
+            echo "Updating backend with frontend URL..."
+            az containerapp update \
+              --name backend-aiagents-gov \
+              --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+              --set-env-vars \
+                FRONTEND_SITE_NAME=https://$FQDN
+          fi
