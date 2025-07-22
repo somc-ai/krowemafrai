@@ -21,7 +21,36 @@
 
 ## 🚀 Deployment Options
 
-### Option 1: Automatic Deployment via GitHub Actions (Recommended)
+### Option 1: Automatic Deployment via Enhanced Script (Recommended for LIVE)
+Use the enhanced `deploy-backend-auto.sh` script for reliable LIVE deployment:
+
+```bash
+# Basic usage (uses default production values)
+./deploy-backend-auto.sh
+
+# With custom environment variables
+export ACR_NAME="your-acr-name"
+export RESOURCE_GROUP="your-resource-group"
+export CONTAINER_APP="your-container-app"
+export IMAGE_TAG="v1.0.0"
+./deploy-backend-auto.sh
+```
+
+**Features:**
+- ✅ **Production-ready configuration** with real Azure values
+- ✅ **Comprehensive error handling** and pre-deployment validation
+- ✅ **Colored logging** for better visibility
+- ✅ **Environment variable support** for flexibility
+- ✅ **Post-deployment verification** with health checks
+- ✅ **Detailed deployment summary** and monitoring tips
+
+**Default Configuration:**
+- Container Registry: `ca2a76f03945acr.azurecr.io`
+- Resource Group: `rg-info-2259`
+- Container App: `backend-aiagents-gov`
+- Dockerfile: `src/backend/Dockerfile.azure`
+
+### Option 2: Automatic Deployment via GitHub Actions
 The repository has GitHub Actions workflows configured for automatic deployment:
 
 1. **Backend deployment** (`deploy-backend-azure.yml`): 
@@ -35,7 +64,7 @@ The repository has GitHub Actions workflows configured for automatic deployment:
 
 **To deploy**: Merge this PR to main branch and the workflows will automatically deploy.
 
-### Option 2: Manual Deployment using Azure Developer CLI (azd)
+### Option 3: Manual Deployment using Azure Developer CLI (azd)
 ```bash
 # Install Azure Developer CLI
 # https://learn.microsoft.com/en-us/azure/developer/azure-developer-cli/
@@ -47,7 +76,7 @@ az login
 azd up
 ```
 
-### Option 3: Manual Docker Build and Push
+### Option 4: Manual Docker Build and Push
 ```bash
 # Build backend image
 docker build -f src/backend/Dockerfile.azure -t backend:latest src/backend/
