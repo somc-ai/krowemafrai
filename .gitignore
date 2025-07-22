@@ -458,3 +458,10 @@ __pycache__/
 *.whl
 .azure
 .github/copilot-instructions.md
+
+# Deployment and configuration (prevent accidental commit of sensitive configs)
+deployment-config-*.env
+*.env.local
+*.env.production
+deployment-logs/
+.deployment-temp/
