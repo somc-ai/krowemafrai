@@ -28,4 +28,5 @@ ENV PATH="/app/.venv/bin:$PATH"
 # Install dependencies
 
 EXPOSE 8000
-CMD ["uv", "run", "uvicorn", "app_kernel:app", "--host", "0.0.0.0", "--port", "8000"]
+ENV PYTHONPATH=/app/src
+CMD ["uv", "run", "uvicorn", "src.backend.app_kernel:app", "--host", "0.0.0.0", "--port", "8000"]
