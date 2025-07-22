@@ -16,7 +16,7 @@ export let USER_ID: string | null = null;
 export let USER_INFO: UserInfo | null = null;
 
 export let config = {
-    API_URL: "https://aiagentsgov-dtd0g4hrgebba9fz.westeurope-01.azurewebsites.net/api",
+    API_URL: "",
     ENABLE_AUTH: false,
 };
 

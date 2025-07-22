@@ -169,15 +169,10 @@ async def rai_success(description: str) -> bool:
         True if it passes, False otherwise
     """
     try:
-        # Use DefaultAzureCredential for authentication to Azure OpenAI
-        credential = DefaultAzureCredential()
-        access_token = credential.get_token(
-            "https://cognitiveservices.azure.com/.default"
-        ).token
-
         CHECK_ENDPOINT = os.getenv("AZURE_OPENAI_ENDPOINT")
         API_VERSION = os.getenv("AZURE_OPENAI_API_VERSION")
         DEPLOYMENT_NAME = os.getenv("AZURE_OPENAI_MODEL_NAME")
+        API_KEY = os.getenv("AZURE_OPENAI_API_KEY")
 
         if not all([CHECK_ENDPOINT, API_VERSION, DEPLOYMENT_NAME]):
             logging.error("Missing required environment variables for RAI check")
@@ -185,10 +180,23 @@ async def rai_success(description: str) -> bool:
             return True
 
         url = f"{CHECK_ENDPOINT}/openai/deployments/{DEPLOYMENT_NAME}/chat/completions?api-version={API_VERSION}"
-        headers = {
-            "Authorization": f"Bearer {access_token}",
-            "Content-Type": "application/json",
-        }
+        
+        # Use API key if available, otherwise use DefaultAzureCredential
+        if API_KEY:
+            headers = {
+                "api-key": API_KEY,
+                "Content-Type": "application/json",
+            }
+        else:
+            # Use DefaultAzureCredential for authentication to Azure OpenAI
+            credential = DefaultAzureCredential()
+            access_token = credential.get_token(
+                "https://cognitiveservices.azure.com/.default"
+            ).token
+            headers = {
+                "Authorization": f"Bearer {access_token}",
+                "Content-Type": "application/json",
+            }
 
         # Payload for the request
         payload = {

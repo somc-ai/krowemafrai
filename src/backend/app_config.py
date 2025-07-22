@@ -6,6 +6,8 @@ from typing import Optional
 from azure.ai.projects.aio import AIProjectClient
 from azure.cosmos.aio import CosmosClient
 from azure.identity import DefaultAzureCredential
+from azure.core.credentials import AzureKeyCredential
+from openai import AsyncAzureOpenAI
 from dotenv import load_dotenv
 from semantic_kernel.kernel import Kernel
 
@@ -36,6 +38,7 @@ class AppConfig:
             "AZURE_OPENAI_API_VERSION", "2024-11-20"
         )
         self.AZURE_OPENAI_ENDPOINT = self._get_required("AZURE_OPENAI_ENDPOINT")
+        self.AZURE_OPENAI_API_KEY = self._get_optional("AZURE_OPENAI_API_KEY")
         self.AZURE_OPENAI_SCOPES = [
             f"{self._get_optional('AZURE_OPENAI_SCOPE', 'https://cognitiveservices.azure.com/.default')}"
         ]
@@ -159,8 +162,37 @@ class AppConfig:
         kernel = Kernel()
         return kernel
 
+    def get_azure_openai_client(self):
+        """Create and return a direct AsyncAzureOpenAI client.
+        
+        This bypasses AIProjectClient and uses direct Azure OpenAI authentication.
+
+        Returns:
+            AsyncAzureOpenAI client instance
+        """
+        try:
+            if not self.AZURE_OPENAI_API_KEY:
+                raise ValueError("AZURE_OPENAI_API_KEY is required for Azure OpenAI client")
+                
+            from openai import AsyncAzureOpenAI
+            
+            client = AsyncAzureOpenAI(
+                api_key=self.AZURE_OPENAI_API_KEY,
+                api_version=self.AZURE_OPENAI_API_VERSION,
+                azure_endpoint=self.AZURE_OPENAI_ENDPOINT
+            )
+            
+            logging.info("Created direct AsyncAzureOpenAI client with API key")
+            return client
+            
+        except Exception as exc:
+            logging.error("Failed to create AsyncAzureOpenAI client: %s", exc)
+            raise
+
     def get_ai_project_client(self):
-        """Create and return an AIProjectClient for Azure AI Foundry using from_connection_string.
+        """Create and return an AIProjectClient for Azure AI Foundry.
+        
+        Uses API key authentication if available, otherwise falls back to DefaultAzureCredential.
 
         Returns:
             An AIProjectClient instance
@@ -169,14 +201,23 @@ class AppConfig:
             return self._ai_project_client
 
         try:
-            credential = self.get_azure_credentials()
-            if credential is None:
-                raise RuntimeError(
-                    "Unable to acquire Azure credentials; ensure DefaultAzureCredential is configured"
-                )
-
             endpoint = self.AZURE_AI_AGENT_ENDPOINT
-            self._ai_project_client = AIProjectClient(endpoint=endpoint, credential=credential)
+            
+            # Use API key authentication if available
+            if self.AZURE_OPENAI_API_KEY:
+                logging.info("Using API key authentication for AIProjectClient")
+                from azure.core.credentials import AzureKeyCredential
+                credential = AzureKeyCredential(self.AZURE_OPENAI_API_KEY)
+                self._ai_project_client = AIProjectClient(endpoint=endpoint, credential=credential)
+            else:
+                # Fall back to DefaultAzureCredential
+                logging.info("Using DefaultAzureCredential for AIProjectClient")
+                credential = self.get_azure_credentials()
+                if credential is None:
+                    raise RuntimeError(
+                        "Unable to acquire Azure credentials; ensure DefaultAzureCredential is configured"
+                    )
+                self._ai_project_client = AIProjectClient(endpoint=endpoint, credential=credential)
 
             return self._ai_project_client
         except Exception as exc:

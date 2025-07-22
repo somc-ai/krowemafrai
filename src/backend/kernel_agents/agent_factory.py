@@ -216,13 +216,14 @@ class AgentFactory:
         planner_agent_type = AgentType.PLANNER
         group_chat_manager_type = AgentType.GROUP_CHAT_MANAGER
 
+        # Skip AIProjectClient creation - use direct Semantic Kernel approach
         try:
-            if client is None:
-                # Create the AIProjectClient instance using the config
-                # This is a placeholder; replace with actual client creation logic
-                client = config.get_ai_project_client()
+            # Instead of creating AIProjectClient, create a simple mock client
+            client = None  # We'll handle authentication in the agent classes directly
+            logger.info("Skipping AIProjectClient - using direct Azure OpenAI authentication")
         except Exception as client_exc:
-            logger.error(f"Error creating AIProjectClient: {client_exc}")
+            logger.error(f"Error with client setup: {client_exc}")
+            client = None
         # Initialize cache for this session if it doesn't exist
         if session_id not in cls._agent_cache:
             cls._agent_cache[session_id] = {}

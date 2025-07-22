@@ -1,9 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import './App.css';
 
-// Get API URL from environment variables with fallback
-const API_URL = import.meta.env.VITE_API_URL || process.env.REACT_APP_API_URL || 'http://127.0.0.1:8000';
-
 function App() {
   const [selectedAgents, setSelectedAgents] = useState([]);
   const [scenario, setScenario] = useState('');
@@ -11,26 +8,76 @@ function App() {
   const [analysis, setAnalysis] = useState(null);
   const [agents, setAgents] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [apiUrl, setApiUrl] = useState(''); // Dynamic API URL from config
 
-  // Haal agents op uit Directus CMS
+  // Haal agents op van backend API
   useEffect(() => {
     const fetchAgents = async () => {
+      console.log('🚀 Starting fetchAgents...');
+      
       try {
-        const response = await fetch('https://so-gov.directus.app/items/agents');
-        const data = await response.json();
+        // Haal eerst config op om API URL te krijgen
+        console.log('📡 Fetching config from /config...');
+        const configResponse = await fetch('/config');
+        console.log('⚙️ Config response status:', configResponse.status, configResponse.statusText);
         
-        const formattedAgents = data.data.map(agent => ({
-          id: agent.id,
-          name: agent.name,
-          description: `${agent.role} specialist`,
-          expertise: agent.role.toLowerCase().includes('demografie') ? 'demografie' :
-                    agent.role.toLowerCase().includes('economie') ? 'economie' : 'wonen'
+        if (!configResponse.ok) {
+          throw new Error(`Config fetch failed: ${configResponse.status} ${configResponse.statusText}`);
+        }
+        
+        const config = await configResponse.json();
+        console.log('⚙️ Frontend config loaded:', config);
+        
+        // Set the API URL in state for use throughout the component
+        setApiUrl(config.API_URL);
+        
+        const agentToolsUrl = `${config.API_URL}/agent-tools`;
+        console.log('🎯 Fetching agents from:', agentToolsUrl);
+        
+        // Test direct fetch with detailed logging
+        const response = await fetch(agentToolsUrl, {
+          method: 'GET',
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+          },
+          credentials: 'omit' // Explicitly no credentials
+        });
+        
+        console.log('📡 Backend response received:', {
+          status: response.status,
+          statusText: response.statusText,
+          url: response.url,
+          headers: Object.fromEntries(response.headers.entries())
+        });
+        
+        if (!response.ok) {
+          throw new Error(`Backend API error: ${response.status} ${response.statusText} at ${agentToolsUrl}`);
+        }
+        
+        const data = await response.json();
+        console.log('📊 Backend data received:', data);
+        console.log('📊 Data type:', typeof data, 'Array?', Array.isArray(data));
+        
+        if (!Array.isArray(data)) {
+          throw new Error('Expected array from backend, got: ' + typeof data);
+        }
+        
+        const formattedAgents = data.map((agent: any, index: number) => ({
+          id: index + 1,
+          name: agent.agent,
+          description: agent.description,
+          expertise: agent.agent
         }));
         
+        console.log('✅ Formatted agents:', formattedAgents);
         setAgents(formattedAgents);
         setLoading(false);
-      } catch (error) {
-        console.error('Error fetching agents:', error);
+      } catch (error: any) {
+        console.error('❌ Error in fetchAgents:', error);
+        console.error('❌ Error name:', error.name);
+        console.error('❌ Error message:', error.message);
+        console.error('❌ Error stack:', error.stack);
         setLoading(false);
       }
     };
@@ -55,10 +102,15 @@ function App() {
       return;
     }
 
+    if (!apiUrl) {
+      alert('API URL niet beschikbaar. Probeer de pagina te verversen.');
+      return;
+    }
+
     setIsAnalyzing(true);
     
     try {
-      const response = await fetch(`${API_URL}/api/input_task`, {
+      const response = await fetch(`${apiUrl}/input_task`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

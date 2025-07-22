@@ -8,14 +8,15 @@ from context.cosmos_memory_kernel import CosmosMemoryContext
 from event_utils import track_event_if_configured
 from models.messages_kernel import (ActionRequest, ActionResponse,
                                     AgentMessage, Step, StepStatus)
-from semantic_kernel.agents.azure_ai.azure_ai_agent import AzureAIAgent
+from semantic_kernel.agents.chat_completion_agent import ChatCompletionAgent
+from semantic_kernel.connectors.ai.azure_openai import AzureChatCompletion
 from semantic_kernel.functions import KernelFunction
 
 # Default formatting instructions used across agents
 DEFAULT_FORMATTING_INSTRUCTIONS = "Instructions: returning the output of this function call verbatim to the user in markdown. Then write AGENT SUMMARY: and then include a summary of what you did."
 
 
-class BaseAgent(AzureAIAgent):
+class BaseAgent(ChatCompletionAgent):
     """BaseAgent implemented using Semantic Kernel with Azure AI Agent support."""
 
     def __init__(
@@ -47,17 +48,49 @@ class BaseAgent(AzureAIAgent):
         system_message = system_message or self.default_system_message(agent_name)
 
         # Call AzureAIAgent constructor with required client and definition
+    def __init__(
+        self,
+        agent_name: str,
+        session_id: str,
+        user_id: str,
+        memory_store: CosmosMemoryContext,
+        tools: Optional[List[KernelFunction]] = None,
+        system_message: Optional[str] = None,
+        client=None,
+        definition=None,
+    ):
+        """
+        Initialize the BaseAgent with Semantic Kernel ChatCompletionAgent.
+        
+        Args:
+            agent_name: Name of the agent
+            session_id: Session identifier
+            user_id: User identifier
+            memory_store: Memory storage for the agent
+            tools: Optional list of tools/functions
+            system_message: Optional system message
+            client: Unused parameter for backwards compatibility
+            definition: Unused parameter for backwards compatibility
+        """
+        # Create a kernel with Azure OpenAI service
+        kernel = config.create_kernel()
+        
+        # Add Azure OpenAI chat service to the kernel
+        chat_service = AzureChatCompletion(
+            deployment_name=config.AZURE_OPENAI_DEPLOYMENT_NAME,
+            endpoint=config.AZURE_OPENAI_ENDPOINT,
+            api_key=config.AZURE_OPENAI_API_KEY,
+            api_version=config.AZURE_OPENAI_API_VERSION,
+        )
+        kernel.add_service(chat_service)
+        
+        # Initialize the ChatCompletionAgent
         super().__init__(
-            deployment_name=None,  # Set as needed
-            plugins=tools,  # Use the loaded plugins,
-            endpoint=None,  # Set as needed
-            api_version=None,  # Set as needed
-            token=None,  # Set as needed
-            model=config.AZURE_OPENAI_DEPLOYMENT_NAME,
-            agent_name=agent_name,
-            system_prompt=system_message,
-            client=client,
-            definition=definition,
+            kernel=kernel,
+            service_id=chat_service.service_id,
+            name=agent_name,
+            instructions=system_message or f"You are {agent_name}, a helpful AI assistant.",
+            plugins=tools
         )
 
         # Store instance variables

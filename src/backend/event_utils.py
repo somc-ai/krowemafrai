@@ -1,6 +1,12 @@
 import logging
 import os
-from azure.monitor.events.extension import track_event
+
+# Optional Azure Monitor import
+try:
+    from azure.monitor.events.extension import track_event
+    AZURE_EVENTS_AVAILABLE = True
+except ImportError:
+    AZURE_EVENTS_AVAILABLE = False
 
 
 def track_event_if_configured(event_name: str, event_data: dict):
@@ -15,8 +21,12 @@ def track_event_if_configured(event_name: str, event_data: dict):
     """
     try:
         instrumentation_key = os.getenv("APPLICATIONINSIGHTS_CONNECTION_STRING")
-        if instrumentation_key:
+        if instrumentation_key and AZURE_EVENTS_AVAILABLE:
             track_event(event_name, event_data)
+        elif instrumentation_key:
+            logging.warning(
+                f"Application Insights configured but azure.monitor.events not available. Event '{event_name}' not tracked."
+            )
         else:
             logging.warning(
                 f"Skipping track_event for {event_name} as Application Insights is not configured"
