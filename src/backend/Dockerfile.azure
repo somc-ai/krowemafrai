@@ -1,5 +1,5 @@
 # Dockerfile for Azure Container Apps - optimized for Python 3.12 (working base image)
-# Updated: Force deployment trigger
+# Updated: Force deployment trigger - Mock response active - DEPLOY NOW
 
 FROM python:3.12-slim AS base
 WORKDIR /app
