@@ -35,8 +35,6 @@ jobs:
         uses: azure/container-apps-deploy-action@v2
         with:
           appSourcePath: ${{ github.workspace }}/src/backend
-          _dockerfilePathKey_: _dockerfilePath_
-          _targetLabelKey_: _targetLabel_
           dockerfilePath: Dockerfile.azure
           registryUrl: ca2a76f03945acr.azurecr.io
           registryUsername: ${{ secrets.BACKENDAIAGENTSGOV_REGISTRY_USERNAME }}
@@ -57,7 +55,5 @@ jobs:
             COSMOSDB_CONTAINER=memory
             BACKEND_API_URL=https://backend-aiagents-gov.victoriouscoast-531c9ceb.westeurope.azurecontainerapps.io
             FRONTEND_SITE_NAME=https://frontend-aiagents-gov.victoriouscoast-531c9ceb.westeurope.azurecontainerapps.io
-          _buildArgumentsKey_: |
-            _buildArgumentsValues_
 
 
