@@ -34,9 +34,10 @@ jobs:
       - name: Build and push container image to registry
         uses: azure/container-apps-deploy-action@v2
         with:
-          appSourcePath: ${{ github.workspace }}/src/backend/Dockerfile.azure
+          appSourcePath: ${{ github.workspace }}/src/backend
           _dockerfilePathKey_: _dockerfilePath_
           _targetLabelKey_: _targetLabel_
+          dockerfilePath: Dockerfile.azure
           registryUrl: ca2a76f03945acr.azurecr.io
           registryUsername: ${{ secrets.BACKENDAIAGENTSGOV_REGISTRY_USERNAME }}
           registryPassword: ${{ secrets.BACKENDAIAGENTSGOV_REGISTRY_PASSWORD }}
