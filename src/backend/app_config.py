@@ -120,19 +120,39 @@ class AppConfig:
             return self._azure_credentials
 
         try:
-            logging.info("Azure environment variables - TENANT_ID: %s, CLIENT_ID: %s, CLIENT_SECRET: %s", 
+            logging.info("=== Azure Authentication Debug ===")
+            logging.info("AZURE_TENANT_ID: %s (value: %s)", 
                         "SET" if self.AZURE_TENANT_ID else "NOT_SET",
+                        self.AZURE_TENANT_ID[:8] + "..." if self.AZURE_TENANT_ID else "None")
+            logging.info("AZURE_CLIENT_ID: %s (value: %s)", 
                         "SET" if self.AZURE_CLIENT_ID else "NOT_SET", 
+                        self.AZURE_CLIENT_ID[:8] + "..." if self.AZURE_CLIENT_ID else "None")
+            logging.info("AZURE_CLIENT_SECRET: %s", 
                         "SET" if self.AZURE_CLIENT_SECRET else "NOT_SET")
+            logging.info("AZURE_OPENAI_API_KEY: %s", 
+                        "SET" if self.AZURE_OPENAI_API_KEY else "NOT_SET")
             
-            if self.AZURE_TENANT_ID and self.AZURE_CLIENT_ID and self.AZURE_CLIENT_SECRET:
-                logging.info("Using explicit environment credentials for Azure authentication")
-                from azure.identity import EnvironmentCredential
-                self._azure_credentials = EnvironmentCredential()
+            if self.AZURE_OPENAI_API_KEY:
+                logging.info("Using API key authentication - no Azure credentials needed for OpenAI")
+                # For Cosmos DB, we still need Azure credentials
+                if self.AZURE_TENANT_ID and self.AZURE_CLIENT_ID and self.AZURE_CLIENT_SECRET:
+                    logging.info("Using EnvironmentCredential for Cosmos DB authentication")
+                    from azure.identity import EnvironmentCredential
+                    self._azure_credentials = EnvironmentCredential()
+                else:
+                    logging.info("Using DefaultAzureCredential for Cosmos DB authentication")
+                    self._azure_credentials = DefaultAzureCredential()
             else:
-                logging.info("Using DefaultAzureCredential for Azure authentication")
-                self._azure_credentials = DefaultAzureCredential()
+                # No API key, need full Azure credentials
+                if self.AZURE_TENANT_ID and self.AZURE_CLIENT_ID and self.AZURE_CLIENT_SECRET:
+                    logging.info("Using explicit EnvironmentCredential for all Azure services")
+                    from azure.identity import EnvironmentCredential
+                    self._azure_credentials = EnvironmentCredential()
+                else:
+                    logging.info("Using DefaultAzureCredential for all Azure services")
+                    self._azure_credentials = DefaultAzureCredential()
             
+            logging.info("=== End Azure Authentication Debug ===")
             return self._azure_credentials
         except Exception as exc:
             logging.error("Failed to create Azure credentials: %s", exc)
