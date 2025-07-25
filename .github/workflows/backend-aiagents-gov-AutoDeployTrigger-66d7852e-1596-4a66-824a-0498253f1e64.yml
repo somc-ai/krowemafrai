@@ -32,9 +32,18 @@ jobs:
       - name: Extract Azure credentials
         id: azure-creds
         run: |
-          echo "AZURE_TENANT_ID=$(echo '${{ secrets.AZURE_CREDENTIALS }}' | jq -r '.tenantId')" >> $GITHUB_OUTPUT
-          echo "AZURE_CLIENT_ID=$(echo '${{ secrets.AZURE_CREDENTIALS }}' | jq -r '.clientId')" >> $GITHUB_OUTPUT
-          echo "AZURE_CLIENT_SECRET=$(echo '${{ secrets.AZURE_CREDENTIALS }}' | jq -r '.clientSecret')" >> $GITHUB_OUTPUT
+          echo "Extracting Azure credentials from AZURE_CREDENTIALS secret..."
+          TENANT_ID=$(echo '${{ secrets.AZURE_CREDENTIALS }}' | jq -r '.tenantId')
+          CLIENT_ID=$(echo '${{ secrets.AZURE_CREDENTIALS }}' | jq -r '.clientId')
+          CLIENT_SECRET=$(echo '${{ secrets.AZURE_CREDENTIALS }}' | jq -r '.clientSecret')
+          
+          echo "TENANT_ID extracted: ${TENANT_ID:0:8}..."
+          echo "CLIENT_ID extracted: ${CLIENT_ID:0:8}..."
+          echo "CLIENT_SECRET extracted: [REDACTED]"
+          
+          echo "AZURE_TENANT_ID=$TENANT_ID" >> $GITHUB_OUTPUT
+          echo "AZURE_CLIENT_ID=$CLIENT_ID" >> $GITHUB_OUTPUT
+          echo "AZURE_CLIENT_SECRET=$CLIENT_SECRET" >> $GITHUB_OUTPUT
 
       - name: Build and push container image to registry
         uses: azure/container-apps-deploy-action@v2
