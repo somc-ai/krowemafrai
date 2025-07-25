@@ -1,6 +1,7 @@
 name: Trigger auto deployment for backend-aiagents-gov
 
 # When this action will be executed
+# Retry deployment after debugging changes
 on:
   # Automatically trigger it when detected changes in repo
   push:
