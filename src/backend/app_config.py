@@ -253,7 +253,7 @@ class AppConfig:
     def get_ai_project_client(self):
         """Create and return an AIProjectClient for Azure AI Foundry.
         
-        Uses API key authentication if available, otherwise falls back to DefaultAzureCredential.
+        Uses ClientSecretCredential with proper Azure credentials.
 
         Returns:
             An AIProjectClient instance
@@ -264,21 +264,15 @@ class AppConfig:
         try:
             endpoint = self.AZURE_AI_AGENT_ENDPOINT
             
-            # Use API key authentication if available
-            if self.AZURE_OPENAI_API_KEY:
-                logging.info("Using API key authentication for AIProjectClient")
-                from azure.core.credentials import AzureKeyCredential
-                credential = AzureKeyCredential(self.AZURE_OPENAI_API_KEY)
-                self._ai_project_client = AIProjectClient(endpoint=endpoint, credential=credential)
-            else:
-                # Fall back to DefaultAzureCredential
-                logging.info("Using DefaultAzureCredential for AIProjectClient")
-                credential = self.get_azure_credentials()
-                if credential is None:
-                    raise RuntimeError(
-                        "Unable to acquire Azure credentials; ensure DefaultAzureCredential is configured"
-                    )
-                self._ai_project_client = AIProjectClient(endpoint=endpoint, credential=credential)
+            logging.info("Creating AIProjectClient with Azure credentials")
+            credential = self.get_azure_credentials()
+            if credential is None:
+                raise RuntimeError(
+                    "Unable to acquire Azure credentials for AIProjectClient; ensure Azure authentication is configured"
+                )
+            
+            self._ai_project_client = AIProjectClient(endpoint=endpoint, credential=credential)
+            logging.info("Successfully created AIProjectClient with Azure credentials")
 
             return self._ai_project_client
         except Exception as exc:
