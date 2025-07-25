@@ -57,7 +57,7 @@ jobs:
           containerAppName: backend-aiagents-gov
           resourceGroup: rg-info-2259
           imageToBuild: ca2a76f03945acr.azurecr.io/backend-aiagents-gov:${{ github.sha }}
-          environmentVariables: |
+          environmentVariables: >-
             AZURE_OPENAI_ENDPOINT=https://somc-ai-gov-openai.openai.azure.com/
             AZURE_OPENAI_DEPLOYMENT_NAME=gpt-4o
             AZURE_OPENAI_API_VERSION=2024-08-01-preview
