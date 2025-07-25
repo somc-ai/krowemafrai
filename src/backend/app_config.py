@@ -5,7 +5,7 @@ from typing import Optional
 
 from azure.ai.projects.aio import AIProjectClient
 from azure.cosmos.aio import CosmosClient
-from azure.identity import DefaultAzureCredential, EnvironmentCredential
+from azure.identity import DefaultAzureCredential, EnvironmentCredential, ClientSecretCredential
 from azure.core.credentials import AzureKeyCredential
 from openai import AsyncAzureOpenAI
 from dotenv import load_dotenv
@@ -110,10 +110,10 @@ class AppConfig:
         return name in os.environ and os.environ[name].lower() in ["true", "1"]
 
     def get_azure_credentials(self):
-        """Get Azure credentials using DefaultAzureCredential with explicit environment credential support.
+        """Get Azure credentials with comprehensive authentication strategy.
 
         Returns:
-            DefaultAzureCredential instance for Azure authentication
+            Azure credential instance for authentication
         """
         # Cache the credentials object
         if self._azure_credentials is not None:
@@ -132,31 +132,60 @@ class AppConfig:
             logging.info("AZURE_OPENAI_API_KEY: %s", 
                         "SET" if self.AZURE_OPENAI_API_KEY else "NOT_SET")
             
+            # Strategy 1: Use API key authentication for OpenAI services when available
             if self.AZURE_OPENAI_API_KEY:
-                logging.info("Using API key authentication - no Azure credentials needed for OpenAI")
-                # For Cosmos DB, we still need Azure credentials
+                logging.info("API key available - using hybrid authentication strategy")
+                
+                # For services that support API key, we don't need Azure credentials
+                # For Cosmos DB and other services, we still need Azure credentials
                 if self.AZURE_TENANT_ID and self.AZURE_CLIENT_ID and self.AZURE_CLIENT_SECRET:
-                    logging.info("Using EnvironmentCredential for Cosmos DB authentication")
-                    from azure.identity import EnvironmentCredential
-                    self._azure_credentials = EnvironmentCredential()
+                    logging.info("Creating ClientSecretCredential with explicit values")
+                    from azure.identity import ClientSecretCredential
+                    self._azure_credentials = ClientSecretCredential(
+                        tenant_id=self.AZURE_TENANT_ID,
+                        client_id=self.AZURE_CLIENT_ID,
+                        client_secret=self.AZURE_CLIENT_SECRET
+                    )
+                    logging.info("Successfully created ClientSecretCredential")
                 else:
-                    logging.info("Using DefaultAzureCredential for Cosmos DB authentication")
+                    logging.warning("API key available but Azure credentials incomplete - using DefaultAzureCredential")
                     self._azure_credentials = DefaultAzureCredential()
             else:
-                # No API key, need full Azure credentials
                 if self.AZURE_TENANT_ID and self.AZURE_CLIENT_ID and self.AZURE_CLIENT_SECRET:
-                    logging.info("Using explicit EnvironmentCredential for all Azure services")
-                    from azure.identity import EnvironmentCredential
-                    self._azure_credentials = EnvironmentCredential()
+                    logging.info("Creating ClientSecretCredential for all Azure services")
+                    from azure.identity import ClientSecretCredential
+                    self._azure_credentials = ClientSecretCredential(
+                        tenant_id=self.AZURE_TENANT_ID,
+                        client_id=self.AZURE_CLIENT_ID,
+                        client_secret=self.AZURE_CLIENT_SECRET
+                    )
+                    logging.info("Successfully created ClientSecretCredential for all services")
                 else:
-                    logging.info("Using DefaultAzureCredential for all Azure services")
+                    logging.warning("No API key and incomplete Azure credentials - using DefaultAzureCredential")
                     self._azure_credentials = DefaultAzureCredential()
+            
+            try:
+                import asyncio
+                from azure.core.credentials import AccessToken
+                
+                logging.info("Testing credential token acquisition...")
+                logging.info("Credential object created successfully")
+                
+            except Exception as test_exc:
+                logging.warning("Credential test failed, but continuing: %s", test_exc)
             
             logging.info("=== End Azure Authentication Debug ===")
             return self._azure_credentials
+            
         except Exception as exc:
             logging.error("Failed to create Azure credentials: %s", exc)
-            return None
+            logging.error("Falling back to DefaultAzureCredential as last resort")
+            try:
+                self._azure_credentials = DefaultAzureCredential()
+                return self._azure_credentials
+            except Exception as fallback_exc:
+                logging.error("Even DefaultAzureCredential failed: %s", fallback_exc)
+                return None
 
     def get_cosmos_database_client(self):
         """Get a Cosmos DB client for the configured database.
