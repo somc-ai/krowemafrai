@@ -29,6 +29,13 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
+      - name: Extract Azure credentials
+        id: azure-creds
+        run: |
+          echo "AZURE_TENANT_ID=$(echo '${{ secrets.AZURE_CREDENTIALS }}' | jq -r '.tenantId')" >> $GITHUB_OUTPUT
+          echo "AZURE_CLIENT_ID=$(echo '${{ secrets.AZURE_CREDENTIALS }}' | jq -r '.clientId')" >> $GITHUB_OUTPUT
+          echo "AZURE_CLIENT_SECRET=$(echo '${{ secrets.AZURE_CREDENTIALS }}' | jq -r '.clientSecret')" >> $GITHUB_OUTPUT
+
       - name: Build and push container image to registry
         uses: azure/container-apps-deploy-action@v2
         with:
@@ -45,6 +52,9 @@ jobs:
             AZURE_OPENAI_DEPLOYMENT_NAME=gpt-4o
             AZURE_OPENAI_API_VERSION=2024-08-01-preview
             AZURE_OPENAI_API_KEY=${{ secrets.AZURE_OPENAI_API_KEY }}
+            AZURE_TENANT_ID=${{ steps.azure-creds.outputs.AZURE_TENANT_ID }}
+            AZURE_CLIENT_ID=${{ steps.azure-creds.outputs.AZURE_CLIENT_ID }}
+            AZURE_CLIENT_SECRET=${{ steps.azure-creds.outputs.AZURE_CLIENT_SECRET }}
             AZURE_AI_SUBSCRIPTION_ID=05cc117e-29ea-49f3-9428-c5d042340a91
             AZURE_AI_RESOURCE_GROUP=rg-info-2259
             AZURE_AI_PROJECT_NAME=ai-project-default
