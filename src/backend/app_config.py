@@ -5,7 +5,7 @@ from typing import Optional
 
 from azure.ai.projects.aio import AIProjectClient
 from azure.cosmos.aio import CosmosClient
-from azure.identity import DefaultAzureCredential
+from azure.identity import DefaultAzureCredential, EnvironmentCredential
 from azure.core.credentials import AzureKeyCredential
 from openai import AsyncAzureOpenAI
 from dotenv import load_dotenv
@@ -110,7 +110,7 @@ class AppConfig:
         return name in os.environ and os.environ[name].lower() in ["true", "1"]
 
     def get_azure_credentials(self):
-        """Get Azure credentials using DefaultAzureCredential.
+        """Get Azure credentials using DefaultAzureCredential with explicit environment credential support.
 
         Returns:
             DefaultAzureCredential instance for Azure authentication
@@ -120,10 +120,22 @@ class AppConfig:
             return self._azure_credentials
 
         try:
-            self._azure_credentials = DefaultAzureCredential()
+            logging.info("Azure environment variables - TENANT_ID: %s, CLIENT_ID: %s, CLIENT_SECRET: %s", 
+                        "SET" if self.AZURE_TENANT_ID else "NOT_SET",
+                        "SET" if self.AZURE_CLIENT_ID else "NOT_SET", 
+                        "SET" if self.AZURE_CLIENT_SECRET else "NOT_SET")
+            
+            if self.AZURE_TENANT_ID and self.AZURE_CLIENT_ID and self.AZURE_CLIENT_SECRET:
+                logging.info("Using explicit environment credentials for Azure authentication")
+                from azure.identity import EnvironmentCredential
+                self._azure_credentials = EnvironmentCredential()
+            else:
+                logging.info("Using DefaultAzureCredential for Azure authentication")
+                self._azure_credentials = DefaultAzureCredential()
+            
             return self._azure_credentials
         except Exception as exc:
-            logging.warning("Failed to create DefaultAzureCredential: %s", exc)
+            logging.error("Failed to create Azure credentials: %s", exc)
             return None
 
     def get_cosmos_database_client(self):
