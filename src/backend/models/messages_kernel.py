@@ -294,6 +294,13 @@ class HumanClarification(KernelBaseModel):
     human_clarification: str
 
 
+class PlanRequest(KernelBaseModel):
+    """Message for plan creation requests."""
+    
+    session_id: str
+    description: str
+
+
 class ActionRequest(KernelBaseModel):
     """Message sent to an agent to perform an action."""
 

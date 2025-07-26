@@ -39,6 +39,7 @@ from models.messages_kernel import (
     HumanClarification,
     HumanFeedback,
     InputTask,
+    PlanRequest,
     PlanWithSteps,
     Step,
 )
@@ -109,6 +110,21 @@ logging.info("Added health check middleware")
 async def root():
     """Root endpoint to confirm the API is running."""
     return {"message": "AI Agent GOV API is running", "status": "healthy", "docs": "/docs"}
+
+
+@app.post("/plan")
+async def plan_endpoint(plan_request: PlanRequest):
+    """
+    Receive a plan request from the user.
+    Returns a dummy response confirming plan receipt.
+    """
+    logging.info(f"Received plan request: session_id={plan_request.session_id}, description={plan_request.description}")
+    
+    return {
+        "message": "Plan ontvangen",
+        "session_id": plan_request.session_id,
+        "description": plan_request.description
+    }
 
 
 @app.get("/health")
