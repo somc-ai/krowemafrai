@@ -99,6 +99,13 @@ async def debug_build_contents():
         return {"error": str(e), "build_dir": BUILD_DIR}
 
 
+@app.get("/test")
+async def serve_test_page():
+    """Serve the test page for debugging"""
+    test_file = os.path.join(os.path.dirname(__file__), "test.html")
+    return FileResponse(test_file, media_type='text/html')
+
+
 @app.get("/config")
 async def get_config():
     # Use the working backend URL as fallback

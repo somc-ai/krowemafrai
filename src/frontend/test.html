@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Frontend Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 50px;
+            background: linear-gradient(135deg, #f3e8ff 0%, #fce7f3 50%, #e0e7ff 100%);
+            min-height: 100vh;
+        }
+        .container {
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        h1 {
+            color: #8b5cf6;
+            text-align: center;
+        }
+        .status {
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 10px;
+            background: #f0f9ff;
+            border-left: 4px solid #0ea5e9;
+        }
+        button {
+            background: linear-gradient(135deg, #8b5cf6, #ec4899);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px;
+        }
+        button:hover {
+            opacity: 0.9;
+        }
+        #results {
+            margin-top: 20px;
+            padding: 20px;
+            background: #f8fafc;
+            border-radius: 10px;
+            white-space: pre-wrap;
+            font-family: monospace;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 SoMC.AI Frontend Test</h1>
+        
+        <div class="status">
+            <strong>Status:</strong> Frontend server is running ✅<br>
+            <strong>Time:</strong> <span id="time"></span><br>
+            <strong>URL:</strong> <span id="url"></span>
+        </div>
+
+        <button onclick="testConfig()">Test Config Endpoint</button>
+        <button onclick="testBackend()">Test Backend Connection</button>
+        <button onclick="testAgents()">Test Agent Tools</button>
+        <button onclick="testInputTask()">Test Input Task</button>
+
+        <div id="results"></div>
+    </div>
+
+    <script>
+        // Update time and URL
+        document.getElementById('time').textContent = new Date().toLocaleString();
+        document.getElementById('url').textContent = window.location.href;
+
+        async function testConfig() {
+            const results = document.getElementById('results');
+            results.textContent = 'Testing /config endpoint...\n';
+            
+            try {
+                const response = await fetch('/config');
+                const data = await response.json();
+                results.textContent += `✅ Config loaded successfully:\n${JSON.stringify(data, null, 2)}\n`;
+            } catch (error) {
+                results.textContent += `❌ Config test failed: ${error.message}\n`;
+            }
+        }
+
+        async function testBackend() {
+            const results = document.getElementById('results');
+            results.textContent = 'Testing backend connection...\n';
+            
+            try {
+                // First get config to get API URL
+                const configResponse = await fetch('/config');
+                const config = await configResponse.json();
+                const apiUrl = config.API_URL;
+                
+                results.textContent += `📡 Using API URL: ${apiUrl}\n`;
+                
+                // Test backend health
+                const healthResponse = await fetch(apiUrl.replace('/api', '/health'));
+                const healthData = await healthResponse.json();
+                
+                results.textContent += `✅ Backend health check passed:\n${JSON.stringify(healthData, null, 2)}\n`;
+            } catch (error) {
+                results.textContent += `❌ Backend test failed: ${error.message}\n`;
+            }
+        }
+
+        async function testAgents() {
+            const results = document.getElementById('results');
+            results.textContent = 'Testing agent tools endpoint...\n';
+            
+            try {
+                const configResponse = await fetch('/config');
+                const config = await configResponse.json();
+                const apiUrl = config.API_URL;
+                
+                const agentsResponse = await fetch(`${apiUrl}/agent-tools`);
+                const agentsData = await agentsResponse.json();
+                
+                results.textContent += `✅ Agent tools loaded (${agentsData.length} agents):\n`;
+                agentsData.forEach((agent, index) => {
+                    results.textContent += `${index + 1}. ${agent.agent} - ${agent.description}\n`;
+                });
+            } catch (error) {
+                results.textContent += `❌ Agents test failed: ${error.message}\n`;
+            }
+        }
+
+        async function testInputTask() {
+            const results = document.getElementById('results');
+            results.textContent = 'Testing input task endpoint...\n';
+            
+            try {
+                const configResponse = await fetch('/config');
+                const config = await configResponse.json();
+                const apiUrl = config.API_URL;
+                
+                const testTask = {
+                    session_id: `test_${Date.now()}`,
+                    description: "Test scenario voor frontend debugging"
+                };
+                
+                const taskResponse = await fetch(`${apiUrl}/input_task`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(testTask)
+                });
+                
+                const taskData = await taskResponse.json();
+                
+                results.textContent += `✅ Input task test passed:\n`;
+                results.textContent += `Status: ${taskData.status}\n`;
+                results.textContent += `Agents responded: ${taskData.agent_responses?.length || 0}\n`;
+                results.textContent += `Message: ${taskData.message}\n`;
+            } catch (error) {
+                results.textContent += `❌ Input task test failed: ${error.message}\n`;
+            }
+        }
+
+        // Auto-run config test on page load
+        window.onload = function() {
+            setTimeout(testConfig, 1000);
+        };
+    </script>
+</body>
+</html>
