@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import './App.css';
-import { apiService } from './api/apiService';
 
 function App() {
   const [selectedAgents, setSelectedAgents] = useState([]);
@@ -117,17 +116,15 @@ function App() {
     setIsAnalyzing(true);
     
     try {
-      const response = await apiService.submitInputTask({
-        session_id: `session_${Date.now()}`,
-        description: scenario
-      });
-      
-      setAnalysis({
-        agent_responses: selectedAgents.map(agent => ({
-          agent_name: agent.name,
-          agent_expertise: agent.expertise,
-          response: `Echte AI analyse van ${agent.name}:\n\n${JSON.stringify(response, null, 2)}`
-        }))
+      const response = await fetch(`${apiUrl}/input_task`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          session_id: `session_${Date.now()}`,
+          description: scenario
+        })
       });
 
       if (response.ok) {

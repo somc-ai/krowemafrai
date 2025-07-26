@@ -17,7 +17,14 @@ RUN useradd --create-home --shell /bin/bash app
 # Copy all source files
 COPY . /app
 
+<<<<<<< HEAD
+# Create a non-root user for security
+RUN useradd --create-home --shell /bin/bash app
+
+# Set correct permissions after creating user
+=======
 # Set correct permissions after copying files
+>>>>>>> copilot/fix-55e5b468-cf4f-46c3-b428-7a58f0e50ed1
 RUN chown -R app:app /app
 USER app
 
@@ -27,11 +34,15 @@ ENV PYTHONPATH=/app/src
 
 EXPOSE 8000
 
+<<<<<<< HEAD
+# Health check (using python instead of curl since curl not available in slim image)
+=======
 # Health check - install curl for health checking
 USER root
 RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
 USER app
 
+>>>>>>> copilot/fix-55e5b468-cf4f-46c3-b428-7a58f0e50ed1
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
   CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')" || exit 1
 
