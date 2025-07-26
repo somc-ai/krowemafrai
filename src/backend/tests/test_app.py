@@ -20,10 +20,15 @@ os.environ[
 os.environ["AZURE_OPENAI_DEPLOYMENT_NAME"] = "mock-deployment-name"
 os.environ["AZURE_OPENAI_API_VERSION"] = "2023-01-01"
 os.environ["AZURE_OPENAI_ENDPOINT"] = "https://mock-openai-endpoint"
+# Add additional required environment variables
+os.environ["AZURE_AI_SUBSCRIPTION_ID"] = "mock-subscription-id"
+os.environ["AZURE_AI_RESOURCE_GROUP"] = "mock-resource-group"
+os.environ["AZURE_AI_PROJECT_NAME"] = "mock-project-name"
+os.environ["AZURE_AI_AGENT_ENDPOINT"] = "https://mock-agent-endpoint"
 
 # Mock telemetry initialization to prevent errors
 with patch("azure.monitor.opentelemetry.configure_azure_monitor", MagicMock()):
-    from src.backend.app import app
+    from app_kernel import app
 
 # Initialize FastAPI test client
 client = TestClient(app)
@@ -33,11 +38,11 @@ client = TestClient(app)
 def mock_dependencies(monkeypatch):
     """Mock dependencies to simplify tests."""
     monkeypatch.setattr(
-        "src.backend.auth.auth_utils.get_authenticated_user_details",
+        "auth.auth_utils.get_authenticated_user_details",
         lambda headers: {"user_principal_id": "mock-user-id"},
     )
     monkeypatch.setattr(
-        "src.backend.utils.retrieve_all_agent_tools",
+        "utils.retrieve_all_agent_tools",
         lambda: [{"agent": "test_agent", "function": "test_function"}],
     )
 
