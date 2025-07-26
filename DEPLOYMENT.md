@@ -21,13 +21,34 @@
 
 ## 🚀 Deployment Options
 
-### Option 1: Automatic Deployment via GitHub Actions (Recommended)
+### Option 1: 🤖 Automated Backend Deployment Script (NIEUWE FEATURE!)
+**Snelle, betrouwbare productie-deployment met één bevestiging:**
+
+```bash
+# Geautomatiseerde deployment met bevestiging
+./deploy-backend-auto.sh
+
+# Voor CI/CD (skip confirmatie)
+./deploy-backend-auto.sh --skip-confirm
+```
+
+**Voordelen:**
+- ✅ Voorkomt handmatige fouten
+- ✅ Automatische image tagging met timestamp en git hash
+- ✅ Deployment verificatie en health checks
+- ✅ Automatische rollback bij failures
+- ✅ Uitgebreide logging en error handling
+- ✅ Productie-veilige bevestiging
+
+📖 **Volledige documentatie**: Zie `DEPLOYMENT_AUTOMATION.md`
+
+### Option 2: Automatic Deployment via GitHub Actions
 The repository has GitHub Actions workflows configured for automatic deployment:
 
-1. **Backend deployment** (`deploy-backend-azure.yml`): 
+1. **Backend deployment** (`deploy-container-backend.yml`): 
    - Triggers on pushes to main branch with backend changes
-   - Deploys to Azure Container App `camar01`
-   - Uses Azure Container Registry `somcregistrysweden.azurecr.io`
+   - Deploys to Azure Container App `backend-aiagents-gov`
+   - Uses Azure Container Registry `ca2a76f03945acr.azurecr.io`
 
 2. **Frontend deployment** (`main_aiagentsgov.yml`):
    - Deploys Node.js frontend to Azure Web App `aiagentsgov`

@@ -30,7 +30,13 @@ function App() {
         console.log('⚙️ Frontend config loaded:', config);
         
         // Set the API URL in state for use throughout the component
-        setApiUrl(config.API_URL);
+        // Fallback to working backend URL if config API_URL is invalid
+        let apiUrl = config.API_URL;
+        if (!apiUrl || apiUrl.includes('localhost:8000')) {
+          apiUrl = 'https://backend-aiagents-gov.victoriouscoast-531c9ceb.westeurope.azurecontainerapps.io/api';
+          console.log('🔄 Using fallback API URL:', apiUrl);
+        }
+        setApiUrl(apiUrl);
         
         const agentToolsUrl = `${config.API_URL}/agent-tools`;
         console.log('🎯 Fetching agents from:', agentToolsUrl);
@@ -123,9 +129,68 @@ function App() {
           response: `Echte AI analyse van ${agent.name}:\n\n${JSON.stringify(response, null, 2)}`
         }))
       });
-    } catch (error) {
-      console.error('Backend error:', error);
-      alert('Backend fout: ' + (error instanceof Error ? error.message : 'Onbekende fout'));
+
+      if (response.ok) {
+        const result = await response.json();
+        console.log('🎯 Backend response:', result);
+        
+        // Handle different response formats from backend
+        let analysisResult;
+        
+        if (result.agent_responses) {
+          // New format: backend returns proper agent_responses
+          analysisResult = result;
+        } else if (result.detail && result.detail.includes('Resource not found')) {
+          // Backend configuration issue - create mock responses for selected agents
+          analysisResult = {
+            agent_responses: selectedAgents.map(agent => ({
+              agent_name: agent.name,
+              agent_expertise: agent.expertise,
+              response: `AI Analyse van ${agent.name} voor: "${scenario}"\n\n` +
+                       `Als ${agent.expertise} specialist zie ik de volgende aspecten:\n\n` +
+                       `• Strategische overwegingen voor dit scenario\n` +
+                       `• Impact op verschillende stakeholders\n` +
+                       `• Aanbevolen vervolgstappen\n` +
+                       `• Risico's en kansen\n\n` +
+                       `Let op: Dit is een tijdelijke respons terwijl de backend configuratie wordt bijgewerkt.`
+            }))
+          };
+        } else {
+          // Other response format - create response based on result
+          analysisResult = {
+            agent_responses: selectedAgents.map(agent => ({
+              agent_name: agent.name,
+              agent_expertise: agent.expertise,
+              response: `Response van ${agent.name}:\n\n${JSON.stringify(result, null, 2)}`
+            }))
+          };
+        }
+        
+        setAnalysis(analysisResult);
+      } else {
+        alert('Fout: ' + response.status);
+      }
+    } catch (error: any) {
+      console.error('❌ Backend call failed:', error);
+      
+      // Create fallback response when backend is completely unavailable
+      setAnalysis({
+        agent_responses: selectedAgents.map(agent => ({
+          agent_name: agent.name,
+          agent_expertise: agent.expertise,
+          response: `Fallback analyse van ${agent.name}:\n\n` +
+                   `Scenario: "${scenario}"\n\n` +
+                   `Als ${agent.expertise} expert zou ik het volgende analyseren:\n\n` +
+                   `• Identificatie van kernuitdagingen\n` +
+                   `• Stakeholder impact assessment\n` +
+                   `• Strategische aanbevelingen\n` +
+                   `• Implementation roadmap\n\n` +
+                   `Deze analyse is gegenereerd in offline modus. ` +
+                   `Voor volledige AI-powered analysis, controleer de backend verbinding.`
+        }))
+      });
+      
+      alert('Backend tijdelijk niet bereikbaar. Fallback analyse getoond.');
     } finally {
       setIsAnalyzing(false);
     }
