@@ -466,8 +466,21 @@ else:
 
 @app.get("/")
 async def root():
-    """Root endpoint to confirm the API is running."""
-    return {"message": "AI Agent GOV API is running", "status": "healthy", "docs": "/docs"}
+    """Root endpoint with comprehensive API information."""
+    return {
+        "message": "AI Agent GOV API is running", 
+        "status": "healthy", 
+        "version": "2.0.0",
+        "endpoints": {
+            "docs": "/docs",
+            "health": "/health", 
+            "specialists": "/api/agent-tools",
+            "input_task": "/api/input_task",
+            "plans": "/api/plans",
+            "messages": "/api/messages"
+        },
+        "docs": "/docs"
+    }
 
 
 @app.get("/health")
@@ -477,6 +490,7 @@ async def health_check():
 
 
 @app.post("/api/input_task")
+@app.post("/input_task")  # Legacy support for frontend compatibility
 async def input_task_endpoint(input_task: InputTask, request: Request):
     """
     Receive the initial input task from the user.
@@ -1185,6 +1199,7 @@ async def get_all_messages(request: Request):
 
 
 @app.get("/api/agent-tools")
+@app.get("/specialists")  # Legacy support for frontend compatibility  
 async def get_agent_tools():
     """
     Retrieve all available agent tools.

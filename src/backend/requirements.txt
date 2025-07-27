@@ -3,7 +3,7 @@ fastapi
 uvicorn[standard]
 
 # AI en OpenAI
-openai
+openai==1.84.0
 
 # Azure SDK's (basis)
 azure-cosmos
@@ -17,7 +17,6 @@ azure-ai-projects==1.0.0b11
 azure-ai-inference==1.0.0b9
 azure-search-documents
 azure-ai-evaluation
-openai==1.84.0
 
 # Testtools
 pytest>=8.2,<9
