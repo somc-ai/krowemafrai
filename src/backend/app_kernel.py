@@ -158,70 +158,84 @@ def track_event_if_configured(event_name, properties=None):
 async def generate_ai_response(agent_type: str, user_query: str) -> str:
     """Generate AI response for specific agent type"""
     
-    # Define specialist knowledge bases
+    # Define specialist knowledge bases with specific context analysis
     specialist_prompts = {
-        "hr": """Je bent een HR specialist met expertise in:
-- Strategische personeelsplanning en talent management
-- Organisatieontwikkeling en cultuurverandering  
-- Performance management en medewerkersontwikkeling
-- Arbeidsrecht en compliance
-- Diversiteit, inclusie en welzijn
+        "hr": """Je bent een ervaren HR strategist. Analyseer het gegeven scenario vanuit HR perspectief en geef een SPECIFIEKE analyse. 
+Gebruik de context van het scenario om gerichte aanbevelingen te geven.
 
-Geef een professionele, strategische analyse met concrete aanbevelingen.""",
+Geef geen generieke templates maar concrete, op de situatie toegesneden adviezen over:
+- Specifieke talent behoeften voor dit scenario  
+- Organisatie impact en cultuur aspecten
+- Concrete implementatie stappen met tijdlijnen
+- Meetbare HR KPIs passend bij dit scenario
 
-        "marketing": """Je bent een marketing expert met expertise in:
-- Digitale marketing strategie en campagne ontwikkeling
-- Brand management en positionering
-- Customer journey mapping en segmentatie
-- Content marketing en social media
-- Marketing analytics en ROI optimalisatie
+Maak je antwoord contextspecifiek en actionable.""",
 
-Geef een strategische marketing analyse met actionable insights.""",
+        "marketing": """Je bent een senior marketing strategist. Analyseer het gegeven scenario en geef een SPECIFIEKE marketing strategie.
+Gebruik de context om gerichte marketing aanbevelingen te geven.
 
-        "product": """Je bent een product specialist met expertise in:
-- Product strategie en roadmap planning
-- User experience design en usability
-- Markt research en competitor analyse
-- Product lifecycle management
-- Agile development en product metrics
+Geef geen standaard marketing frameworks maar concrete adviezen voor DIT specifieke scenario:
+- Specifieke doelgroep identificatie voor deze situatie
+- Concrete kanalen en tactieken passend bij dit scenario  
+- Budgetramingen en timeline voor implementatie
+- Meetbare marketing KPIs voor dit specifieke geval
 
-Geef een product-gerichte analyse met ontwikkelaanbevelingen.""",
+Focus op praktische, uitvoerbare marketing acties.""",
 
-        "procurement": """Je bent een procurement specialist met expertise in:
-- Strategic sourcing en vendor management
-- Contract onderhandelingen en risk management
-- Supply chain optimalisatie
-- Cost reduction en value engineering
-- Compliance en sustainability in inkoop
+        "product": """Je bent een product strategy expert. Analyseer het scenario en geef SPECIFIEKE product inzichten.
+Gebruik de context om gerichte product aanbevelingen te maken.
 
-Geef een procurement analyse met kostenefficiënte oplossingen.""",
+Geef geen algemene product principes maar concrete adviezen voor DIT scenario:
+- Specifieke product features of verbeteringen 
+- User experience overwegingen voor deze situatie
+- Technische haalbaarheid en development prioriteiten
+- Concrete product metrics voor succes meting
 
-        "tech_support": """Je bent een tech support specialist met expertise in:
-- IT infrastructure en systeem architectuur
-- Cybersecurity en data protection
-- Cloud migration en digital transformation
-- Helpdesk operations en user support
-- Technology stack optimalisatie
+Focus op praktische product beslissingen en roadmap.""",
 
-Geef een technische analyse met implementeerbare oplossingen.""",
+        "procurement": """Je bent een procurement strategist. Analyseer dit scenario vanuit inkoop/sourcing perspectief.
+Geef SPECIFIEKE procurement adviezen gebaseerd op de context.
 
-        "generic": """Je bent een algemene business analist met expertise in:
-- Strategische planning en business development
-- Proces optimalisatie en change management
-- Data analyse en business intelligence
-- Project management en stakeholder management
-- Risk assessment en compliance
+Geen standaard procurement processen maar concrete adviezen voor DIT scenario:
+- Specifieke leveranciers of partnerships voor deze situatie
+- Cost implications en besparingskansen  
+- Risk factors en mitigatie specifiek voor dit geval
+- Concrete contractuele overwegingen
 
-Geef een holistische business analyse met strategische aanbevelingen.""",
+Focus op praktische sourcing en cost optimization.""",
 
-        "planner": """Je bent een strategische planner met expertise in:
-- Lange termijn strategische planning
-- Resource planning en capaciteitsmanagement
-- Scenario planning en risk modelling
-- KPI ontwikkeling en performance tracking
-- Change management en implementatie roadmaps
+        "tech_support": """Je bent een IT/tech strategist. Analyseer dit scenario vanuit technisch perspectief.
+Geef SPECIFIEKE technische inzichten en oplossingen.
 
-Geef een planmatige analyse met tijdlijnen en mijlpalen."""
+Geen algemene tech best practices maar concrete adviezen voor DIT scenario:
+- Specifieke technologie stack overwegingen
+- Security en compliance aspecten voor deze situatie
+- Implementatie complexiteit en technische risicos
+- Concrete IT infrastructure behoeften
+
+Focus op praktische technische beslissingen en implementatie.""",
+
+        "generic": """Je bent een senior business strategist. Analyseer dit scenario holistisch en geef SPECIFIEKE business inzichten.
+Gebruik de context om gerichte strategische aanbevelingen te maken.
+
+Geen standaard business frameworks maar concrete adviezen voor DIT scenario:
+- Specifieke business opportunities en challenges
+- Stakeholder impact en management voor deze situatie  
+- Resource behoeften en budget overwegingen
+- Concrete implementation roadmap met mijlpalen
+
+Focus op praktische business beslissingen en strategic value.""",
+
+        "planner": """Je bent een strategische planner. Analyseer dit scenario en maak een SPECIFIEKE implementatie planning.
+Gebruik de context om een concrete roadmap te ontwikkelen.
+
+Geen generieke planning templates maar specifieke planning voor DIT scenario:
+- Concrete mijlpalen en deadlines voor deze situatie
+- Resource allocatie en capacity planning  
+- Risk factors en contingency planning specifiek voor dit geval
+- Meetbare success criteria en tracking methods
+
+Focus op praktische planning en projectmanagement."""
     }
     
     # Get agent prompt or use generic
@@ -245,9 +259,17 @@ Geef een planmatige analyse met tijdlijnen en mijlpalen."""
                     model=deployment_name,
                     messages=[
                         {"role": "system", "content": agent_prompt},
-                        {"role": "user", "content": f"Analyseer dit scenario: {user_query}"}
+                        {"role": "user", "content": f"""Scenario: {user_query}
+
+Geef een concrete, specifieke analyse voor dit exacte scenario. Vermijd generieke templates en focus op:
+1. Specifieke aspecten van dit scenario vanuit jouw expertise
+2. Concrete, actionable aanbevelingen 
+3. Realistische implementatie stappen
+4. Specifieke metrics en success criteria
+
+Maak je antwoord praktisch en direct toepasbaar op deze situatie."""}
                     ],
-                    max_tokens=500,
+                    max_tokens=800,
                     temperature=0.7
                 )
                 
@@ -533,11 +555,24 @@ async def input_task_endpoint(input_task: InputTask, request: Request):
                 })
                 
             except Exception as agent_error:
-                # Fallback for individual agent failures
+                # Enhanced fallback for individual agent failures with context
+                expertise_context = {
+                    "hr": f"📊 Voor '{input_task.description}' - kritieke HR overwegingen: talent behoeften, organisatie impact, change management. Specifieke skills gap analyse nodig.",
+                    "marketing": f"📢 Voor '{input_task.description}' - kern marketing vragen: doelgroep identificatie, positioning strategie, kanaal effectiviteit. Markt research aanbevolen.",
+                    "product": f"🚀 Voor '{input_task.description}' - product focus punten: user needs analysis, technical feasibility, market fit assessment. User research starten.",
+                    "procurement": f"🛒 Voor '{input_task.description}' - sourcing prioriteiten: vendor landscape, cost analysis, risk assessment. Supplier evaluation nodig.",
+                    "tech_support": f"⚙️ Voor '{input_task.description}' - technische aspecten: infrastructure requirements, security overwegingen, scalability planning. Technical assessment starten.",
+                    "generic": f"💼 Voor '{input_task.description}' - strategische focus: business alignment, resource planning, ROI assessment. Strategic review aanbevolen.",
+                    "planner": f"📋 Voor '{input_task.description}' - planning prioriteiten: milestone definitie, resource allocatie, risk management. Project planning opstarten."
+                }
+                
+                context_response = expertise_context.get(agent_data["expertise"], 
+                    f"Analyse voor '{input_task.description}' - context-specifieke inzichten worden voorbereid.")
+                
                 agent_responses.append({
                     "agent_name": agent_data["name"],
                     "agent_expertise": agent_data["expertise"],
-                    "response": f"Analyse voor {agent_data['expertise']}: {input_task.description}\n\nEr is een tijdelijk probleem met de AI analyse. Probeer het later opnieuw."
+                    "response": f"{context_response}\n\n⚠️ AI analyse tijdelijk niet beschikbaar - herstart voor volledige strategische inzichten."
                 })
                 logger.warning(f"Agent {agent_data['name']} response failed: {agent_error}")
         
