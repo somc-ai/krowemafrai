@@ -123,7 +123,8 @@ function App() {
         },
         body: JSON.stringify({
           session_id: `session_${Date.now()}`,
-          description: scenario
+          description: scenario,
+          selected_agents: selectedAgents.map(agent => agent.expertise)
         })
       });
 

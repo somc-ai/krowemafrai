@@ -17,6 +17,7 @@ from pydantic import BaseModel
 class InputTask(BaseModel):
     session_id: str
     description: str
+    selected_agents: Optional[List[str]] = None  # List of selected agent expertise types
 
 class HumanFeedback(BaseModel):
     session_id: str
@@ -509,7 +510,14 @@ async def input_task_endpoint(input_task: InputTask, request: Request):
             {"agent": "planner", "name": "Planner Agent", "expertise": "planner"}
         ]
         
-        # Generate AI responses for each agent
+        # Filter agents based on selected_agents if provided
+        if input_task.selected_agents:
+            available_agents_data = [
+                agent for agent in available_agents_data 
+                if agent["expertise"] in input_task.selected_agents
+            ]
+        
+        # Generate AI responses for selected agents only
         agent_responses = []
         for agent_data in available_agents_data:
             try:
