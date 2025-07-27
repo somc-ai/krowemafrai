@@ -248,12 +248,16 @@ Focus op praktische planning en projectmanagement."""
             openai_api_key = os.getenv("AZURE_OPENAI_API_KEY") 
             deployment_name = os.getenv("AZURE_OPENAI_DEPLOYMENT_NAME", "gpt-4o")
             
+            logger.info(f"Azure OpenAI config check - Endpoint: {openai_endpoint is not None}, API Key: {openai_api_key is not None}, Deployment: {deployment_name}")
+            
             if openai_endpoint and openai_api_key:
                 client = AzureOpenAI(
                     azure_endpoint=openai_endpoint,
                     api_key=openai_api_key,
                     api_version="2024-08-01-preview"
                 )
+                
+                logger.info(f"Calling Azure OpenAI for agent: {agent_type}")
                 
                 response = client.chat.completions.create(
                     model=deployment_name,
@@ -273,9 +277,13 @@ Maak je antwoord praktisch en direct toepasbaar op deze situatie."""}
                     temperature=0.7
                 )
                 
-                return response.choices[0].message.content.strip()
+                ai_result = response.choices[0].message.content.strip()
+                logger.info(f"Azure OpenAI success for {agent_type}: {len(ai_result)} characters")
+                return ai_result
         except Exception as e:
-            logger.warning(f"Azure OpenAI failed: {e}")
+            logger.error(f"Azure OpenAI failed for {agent_type}: {e}")
+            logger.error(f"Exception type: {type(e).__name__}")
+            logger.error(f"Exception details: {str(e)}")
     
     # Fallback to enhanced template responses
     enhanced_responses = {
