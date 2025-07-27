@@ -14,14 +14,14 @@ import {
 
 // Constants for endpoints
 const API_ENDPOINTS = {
-    INPUT_TASK: '/input_task',
-    PLANS: '/plans',
-    STEPS: '/steps',
-    HUMAN_FEEDBACK: '/human_feedback',
-    APPROVE_STEPS: '/approve_step_or_steps',
-    HUMAN_CLARIFICATION: '/human_clarification_on_plan',
-    AGENT_MESSAGES: '/agent_messages',
-    MESSAGES: '/messages'
+    INPUT_TASK: '/api/input_task',
+    PLANS: '/api/plans',
+    STEPS: '/api/steps',
+    HUMAN_FEEDBACK: '/api/human_feedback',
+    APPROVE_STEPS: '/api/approve_step_or_steps',
+    HUMAN_CLARIFICATION: '/api/human_clarification_on_plan',
+    AGENT_MESSAGES: '/api/agent_messages',
+    MESSAGES: '/api/messages'
 };
 
 // Simple cache implementation
