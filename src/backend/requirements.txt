@@ -2,6 +2,9 @@
 fastapi
 uvicorn[standard]
 
+# AI en OpenAI
+openai
+
 # Azure SDK's (basis)
 azure-cosmos
 azure-identity

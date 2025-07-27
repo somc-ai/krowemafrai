@@ -37,6 +37,13 @@ except ImportError:
     HEALTH_CHECK_AVAILABLE = False
     print("Warning: HealthCheckMiddleware not available, skipping")
 
+# Try Azure OpenAI import
+try:
+    from openai import AzureOpenAI
+    AZURE_OPENAI_AVAILABLE = True
+except ImportError:
+    AZURE_OPENAI_AVAILABLE = False
+
 # Azure monitoring - optional import
 try:
     from azure.monitor.opentelemetry import configure_azure_monitor
@@ -147,6 +154,251 @@ def get_authenticated_user_details(request_headers):
 def track_event_if_configured(event_name, properties=None):
     pass
 
+async def generate_ai_response(agent_type: str, user_query: str) -> str:
+    """Generate AI response for specific agent type"""
+    
+    # Define specialist knowledge bases
+    specialist_prompts = {
+        "hr": """Je bent een HR specialist met expertise in:
+- Strategische personeelsplanning en talent management
+- Organisatieontwikkeling en cultuurverandering  
+- Performance management en medewerkersontwikkeling
+- Arbeidsrecht en compliance
+- Diversiteit, inclusie en welzijn
+
+Geef een professionele, strategische analyse met concrete aanbevelingen.""",
+
+        "marketing": """Je bent een marketing expert met expertise in:
+- Digitale marketing strategie en campagne ontwikkeling
+- Brand management en positionering
+- Customer journey mapping en segmentatie
+- Content marketing en social media
+- Marketing analytics en ROI optimalisatie
+
+Geef een strategische marketing analyse met actionable insights.""",
+
+        "product": """Je bent een product specialist met expertise in:
+- Product strategie en roadmap planning
+- User experience design en usability
+- Markt research en competitor analyse
+- Product lifecycle management
+- Agile development en product metrics
+
+Geef een product-gerichte analyse met ontwikkelaanbevelingen.""",
+
+        "procurement": """Je bent een procurement specialist met expertise in:
+- Strategic sourcing en vendor management
+- Contract onderhandelingen en risk management
+- Supply chain optimalisatie
+- Cost reduction en value engineering
+- Compliance en sustainability in inkoop
+
+Geef een procurement analyse met kostenefficiënte oplossingen.""",
+
+        "tech_support": """Je bent een tech support specialist met expertise in:
+- IT infrastructure en systeem architectuur
+- Cybersecurity en data protection
+- Cloud migration en digital transformation
+- Helpdesk operations en user support
+- Technology stack optimalisatie
+
+Geef een technische analyse met implementeerbare oplossingen.""",
+
+        "generic": """Je bent een algemene business analist met expertise in:
+- Strategische planning en business development
+- Proces optimalisatie en change management
+- Data analyse en business intelligence
+- Project management en stakeholder management
+- Risk assessment en compliance
+
+Geef een holistische business analyse met strategische aanbevelingen.""",
+
+        "planner": """Je bent een strategische planner met expertise in:
+- Lange termijn strategische planning
+- Resource planning en capaciteitsmanagement
+- Scenario planning en risk modelling
+- KPI ontwikkeling en performance tracking
+- Change management en implementatie roadmaps
+
+Geef een planmatige analyse met tijdlijnen en mijlpalen."""
+    }
+    
+    # Get agent prompt or use generic
+    agent_prompt = specialist_prompts.get(agent_type, specialist_prompts["generic"])
+    
+    # Try Azure OpenAI if available
+    if AZURE_OPENAI_AVAILABLE:
+        try:
+            openai_endpoint = os.getenv("AZURE_OPENAI_ENDPOINT")
+            openai_api_key = os.getenv("AZURE_OPENAI_API_KEY") 
+            deployment_name = os.getenv("AZURE_OPENAI_DEPLOYMENT_NAME", "gpt-4o")
+            
+            if openai_endpoint and openai_api_key:
+                client = AzureOpenAI(
+                    azure_endpoint=openai_endpoint,
+                    api_key=openai_api_key,
+                    api_version="2024-08-01-preview"
+                )
+                
+                response = client.chat.completions.create(
+                    model=deployment_name,
+                    messages=[
+                        {"role": "system", "content": agent_prompt},
+                        {"role": "user", "content": f"Analyseer dit scenario: {user_query}"}
+                    ],
+                    max_tokens=500,
+                    temperature=0.7
+                )
+                
+                return response.choices[0].message.content.strip()
+        except Exception as e:
+            logger.warning(f"Azure OpenAI failed: {e}")
+    
+    # Fallback to enhanced template responses
+    enhanced_responses = {
+        "hr": f"""🎯 **HR Strategische Analyse**
+
+**Scenario:** {user_query}
+
+**📊 HR Impact Assessment:**
+- Talent Management: Identificeer benodigde competenties
+- Organisatie Design: Evalueer huidige structuur effectiviteit  
+- Change Management: Plan voor cultuurverandering
+- Performance: KPI's voor succes meting
+
+**🚀 Aanbevelingen:**
+1. **Korte termijn (0-3 maanden):** Stakeholder analyse en quick wins
+2. **Middellange termijn (3-12 maanden):** Training en development programma's
+3. **Lange termijn (1+ jaar):** Strategische workforce planning
+
+**📈 ROI Indicatoren:**
+- Employee engagement scores
+- Retention rates en recruitment kosten
+- Productiviteit metrics en performance""",
+
+        "marketing": f"""🎯 **Marketing Strategische Analyse**
+
+**Scenario:** {user_query}
+
+**📊 Marketing Opportunity Assessment:**
+- Target Audience: Segmentatie en persona development
+- Competitive Landscape: Market positioning analyse
+- Channel Strategy: Optimale marketing mix
+- Brand Impact: Reputatie en awareness effecten
+
+**🚀 Marketing Roadmap:**
+1. **Launch Fase (0-2 maanden):** Brand awareness campagne
+2. **Growth Fase (2-6 maanden):** Lead generation optimalisatie  
+3. **Scale Fase (6+ maanden):** Customer retention en advocacy
+
+**📈 Success Metrics:**
+- Brand awareness en sentiment tracking
+- Lead quality en conversion rates
+- Customer acquisition cost en lifetime value""",
+
+        "product": f"""🎯 **Product Strategische Analyse**
+
+**Scenario:** {user_query}
+
+**📊 Product Impact Evaluation:**
+- User Experience: Journey mapping en pain points
+- Market Fit: Product-market alignment analyse
+- Technical Feasibility: Development complexiteit
+- Business Value: Revenue en cost implications
+
+**🚀 Product Development Roadmap:**
+1. **Discovery (0-1 maand):** User research en requirements
+2. **MVP Development (1-3 maanden):** Core feature implementation
+3. **Iteration (3+ maanden):** User feedback en optimalisatie
+
+**📈 Product Success KPIs:**
+- User adoption en engagement rates
+- Feature usage analytics
+- Customer satisfaction scores""",
+
+        "procurement": f"""🎯 **Procurement Strategische Analyse**
+
+**Scenario:** {user_query}
+
+**📊 Supply Chain Impact:**
+- Vendor Assessment: Supplier capability en reliability
+- Cost Analysis: Total cost of ownership evaluatie
+- Risk Management: Supply continuity en compliance
+- Sustainability: ESG impact en circular economy
+
+**🚀 Procurement Strategy:**
+1. **Sourcing (0-2 maanden):** RFP proces en vendor selectie
+2. **Negotiation (2-3 maanden):** Contract onderhandelingen
+3. **Implementation (3+ maanden):** Supplier onboarding en monitoring
+
+**📈 Procurement KPIs:**
+- Cost savings en budget adherence
+- Supplier performance scores
+- Contract compliance en risk mitigation""",
+
+        "tech_support": f"""🎯 **Technical Support Analyse**
+
+**Scenario:** {user_query}
+
+**📊 Technical Assessment:**
+- Infrastructure: Systeem capaciteit en schaalbaarheid
+- Security: Cybersecurity risks en compliance
+- Integration: API's en data flow optimalisatie
+- User Experience: Interface design en accessibility
+
+**🚀 Technical Implementation:**
+1. **Planning (0-1 maand):** Architecture design en risk assessment
+2. **Development (1-3 maanden):** System build en testing
+3. **Deployment (3+ maanden):** Go-live en user adoption
+
+**📈 Technical Success Metrics:**
+- System uptime en performance
+- Security incident reductie
+- User satisfaction en adoption rates""",
+
+        "generic": f"""🎯 **Strategische Business Analyse**
+
+**Scenario:** {user_query}
+
+**📊 Business Impact Assessment:**
+- Strategic Alignment: Organisatie doelen en prioriteiten
+- Stakeholder Analysis: Impact op verschillende belanghebbenden
+- Resource Requirements: Budget, tijd en competenties
+- Risk Assessment: Potentiële uitdagingen en mitigaties
+
+**🚀 Implementation Strategy:**
+1. **Preparation (0-2 maanden):** Planning en stakeholder buy-in
+2. **Execution (2-6 maanden):** Gefaseerde implementatie
+3. **Optimization (6+ maanden):** Continuous improvement
+
+**📈 Business Success Indicators:**
+- Strategic goal achievement
+- Stakeholder satisfaction
+- ROI en value realization""",
+
+        "planner": f"""🎯 **Strategische Planning Analyse**
+
+**Scenario:** {user_query}
+
+**📊 Planning Framework:**
+- Timeline Analysis: Kritieke mijlpalen en dependencies
+- Resource Planning: Capaciteit en budget allocatie
+- Risk Planning: Scenario's en contingency planning
+- Success Criteria: Meetbare doelstellingen en KPIs
+
+**🚀 Strategische Roadmap:**
+1. **Phase 1 (0-3 maanden):** Foundation en quick wins
+2. **Phase 2 (3-9 maanden):** Core implementation
+3. **Phase 3 (9+ maanden):** Optimization en scaling
+
+**📈 Planning Success Metrics:**
+- Milestone achievement rates
+- Budget adherence en resource efficiency
+- Stakeholder alignment scores"""
+    }
+    
+    return enhanced_responses.get(agent_type, enhanced_responses["generic"])
+
 class Config:
     FRONTEND_SITE_NAME = ""
 
@@ -231,36 +483,58 @@ async def input_task_endpoint(input_task: InputTask, request: Request):
     Returns a proper response structure that the frontend expects.
     """
     
-    # Simplified version to avoid hanging in Azure
     try:
-        # Create minimal agent responses
-        available_agents = [
-            {
-                "agent_name": "HR Specialist",
-                "agent_expertise": "hr",
-                "response": f"HR analyse voor: {input_task.description}"
-            },
-            {
-                "agent_name": "Marketing Expert", 
-                "agent_expertise": "marketing",
-                "response": f"Marketing perspectief: {input_task.description}"
-            }
+        # Get all available agents from agent-tools endpoint
+        available_agents_data = [
+            {"agent": "hr", "name": "HR Specialist", "expertise": "hr"},
+            {"agent": "marketing", "name": "Marketing Expert", "expertise": "marketing"},
+            {"agent": "product", "name": "Product Specialist", "expertise": "product"},
+            {"agent": "procurement", "name": "Procurement Agent", "expertise": "procurement"},
+            {"agent": "tech_support", "name": "Tech Support Agent", "expertise": "tech_support"},
+            {"agent": "generic", "name": "Generic Agent", "expertise": "generic"},
+            {"agent": "planner", "name": "Planner Agent", "expertise": "planner"}
         ]
         
-        # Return minimal response structure
+        # Generate AI responses for each agent
+        agent_responses = []
+        for agent_data in available_agents_data:
+            try:
+                ai_response = await generate_ai_response(
+                    agent_data["expertise"], 
+                    input_task.description
+                )
+                
+                agent_responses.append({
+                    "agent_name": agent_data["name"],
+                    "agent_expertise": agent_data["expertise"],
+                    "response": ai_response
+                })
+                
+            except Exception as agent_error:
+                # Fallback for individual agent failures
+                agent_responses.append({
+                    "agent_name": agent_data["name"],
+                    "agent_expertise": agent_data["expertise"],
+                    "response": f"Analyse voor {agent_data['expertise']}: {input_task.description}\n\nEr is een tijdelijk probleem met de AI analyse. Probeer het later opnieuw."
+                })
+                logger.warning(f"Agent {agent_data['name']} response failed: {agent_error}")
+        
+        # Return enhanced response structure
         return {
             "status": "success",
             "session_id": input_task.session_id,
-            "agent_responses": available_agents,
-            "message": "Analyse voltooid"
+            "agent_responses": agent_responses,
+            "message": "AI analyse voltooid - strategische inzichten van alle specialisten"
         }
         
     except Exception as e:
+        logger.error(f"Input task processing failed: {e}")
         # Return basic error response
         return {
             "status": "error", 
             "session_id": input_task.session_id,
-            "message": f"Error: {str(e)}"
+            "agent_responses": [],
+            "message": f"Er is een probleem opgetreden: {str(e)}"
         }
 
 
