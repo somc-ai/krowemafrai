@@ -3,6 +3,7 @@ import os
 import asyncio
 import logging
 import uuid
+from datetime import datetime
 from typing import Dict, List, Optional
 
 # Add current directory to path
@@ -44,6 +45,14 @@ try:
     AZURE_OPENAI_AVAILABLE = True
 except ImportError:
     AZURE_OPENAI_AVAILABLE = False
+
+# Try Directus integration import
+try:
+    from directus_integration import directus_manager
+    DIRECTUS_AVAILABLE = True
+except ImportError:
+    DIRECTUS_AVAILABLE = False
+    print("Warning: Directus integration not available")
 
 # Azure monitoring - optional import
 try:
@@ -158,283 +167,228 @@ def track_event_if_configured(event_name, properties=None):
 async def generate_ai_response(agent_type: str, user_query: str) -> str:
     """Generate AI response for specific agent type"""
     
-    # Define specialist knowledge bases with specific context analysis
-    specialist_prompts = {
-        "hr": """Je bent een ervaren HR strategist. Analyseer het gegeven scenario vanuit HR perspectief en geef een SPECIFIEKE analyse. 
-Gebruik de context van het scenario om gerichte aanbevelingen te geven.
-
-Geef geen generieke templates maar concrete, op de situatie toegesneden adviezen over:
-- Specifieke talent behoeften voor dit scenario  
-- Organisatie impact en cultuur aspecten
-- Concrete implementatie stappen met tijdlijnen
-- Meetbare HR KPIs passend bij dit scenario
-
-Maak je antwoord contextspecifiek en actionable.""",
-
-        "marketing": """Je bent een senior marketing strategist. Analyseer het gegeven scenario en geef een SPECIFIEKE marketing strategie.
-Gebruik de context om gerichte marketing aanbevelingen te geven.
-
-Geef geen standaard marketing frameworks maar concrete adviezen voor DIT specifieke scenario:
-- Specifieke doelgroep identificatie voor deze situatie
-- Concrete kanalen en tactieken passend bij dit scenario  
-- Budgetramingen en timeline voor implementatie
-- Meetbare marketing KPIs voor dit specifieke geval
-
-Focus op praktische, uitvoerbare marketing acties.""",
-
-        "product": """Je bent een product strategy expert. Analyseer het scenario en geef SPECIFIEKE product inzichten.
-Gebruik de context om gerichte product aanbevelingen te maken.
-
-Geef geen algemene product principes maar concrete adviezen voor DIT scenario:
-- Specifieke product features of verbeteringen 
-- User experience overwegingen voor deze situatie
-- Technische haalbaarheid en development prioriteiten
-- Concrete product metrics voor succes meting
-
-Focus op praktische product beslissingen en roadmap.""",
-
-        "procurement": """Je bent een procurement strategist. Analyseer dit scenario vanuit inkoop/sourcing perspectief.
-Geef SPECIFIEKE procurement adviezen gebaseerd op de context.
-
-Geen standaard procurement processen maar concrete adviezen voor DIT scenario:
-- Specifieke leveranciers of partnerships voor deze situatie
-- Cost implications en besparingskansen  
-- Risk factors en mitigatie specifiek voor dit geval
-- Concrete contractuele overwegingen
-
-Focus op praktische sourcing en cost optimization.""",
-
-        "tech_support": """Je bent een IT/tech strategist. Analyseer dit scenario vanuit technisch perspectief.
-Geef SPECIFIEKE technische inzichten en oplossingen.
-
-Geen algemene tech best practices maar concrete adviezen voor DIT scenario:
-- Specifieke technologie stack overwegingen
-- Security en compliance aspecten voor deze situatie
-- Implementatie complexiteit en technische risicos
-- Concrete IT infrastructure behoeften
-
-Focus op praktische technische beslissingen en implementatie.""",
-
-        "generic": """Je bent een senior business strategist. Analyseer dit scenario holistisch en geef SPECIFIEKE business inzichten.
-Gebruik de context om gerichte strategische aanbevelingen te maken.
-
-Geen standaard business frameworks maar concrete adviezen voor DIT scenario:
-- Specifieke business opportunities en challenges
-- Stakeholder impact en management voor deze situatie  
-- Resource behoeften en budget overwegingen
-- Concrete implementation roadmap met mijlpalen
-
-Focus op praktische business beslissingen en strategic value.""",
-
-        "planner": """Je bent een strategische planner. Analyseer dit scenario en maak een SPECIFIEKE implementatie planning.
-Gebruik de context om een concrete roadmap te ontwikkelen.
-
-Geen generieke planning templates maar specifieke planning voor DIT scenario:
-- Concrete mijlpalen en deadlines voor deze situatie
-- Resource allocatie en capacity planning  
-- Risk factors en contingency planning specifiek voor dit geval
-- Meetbare success criteria en tracking methods
-
-Focus op praktische planning en projectmanagement."""
-    }
+    # Force enable debug logging for OpenAI
+    logger.info(f"=== AI Response Generation Start ===")
+    logger.info(f"Agent Type: {agent_type}")
+    logger.info(f"User Query: {user_query}")
+    logger.info(f"AZURE_OPENAI_AVAILABLE: {AZURE_OPENAI_AVAILABLE}")
     
-    # Get agent prompt or use generic
-    agent_prompt = specialist_prompts.get(agent_type, specialist_prompts["generic"])
+    # Check environment variables
+    openai_endpoint = os.getenv("AZURE_OPENAI_ENDPOINT")
+    openai_api_key = os.getenv("AZURE_OPENAI_API_KEY") 
+    deployment_name = os.getenv("AZURE_OPENAI_DEPLOYMENT_NAME", "gpt-4o")
     
-    # Try Azure OpenAI if available
-    if AZURE_OPENAI_AVAILABLE:
-        try:
-            openai_endpoint = os.getenv("AZURE_OPENAI_ENDPOINT")
-            openai_api_key = os.getenv("AZURE_OPENAI_API_KEY") 
-            deployment_name = os.getenv("AZURE_OPENAI_DEPLOYMENT_NAME", "gpt-4o")
+    logger.info(f"Environment Check:")
+    logger.info(f"- Endpoint: {openai_endpoint}")
+    logger.info(f"- API Key: {'***' + openai_api_key[-10:] if openai_api_key else 'MISSING'}")
+    logger.info(f"- Deployment: {deployment_name}")
+    
+    # Force try Azure OpenAI even if flag is False
+    try:
+        if not openai_endpoint or not openai_api_key:
+            logger.error("Missing OpenAI credentials - using fallback")
+            raise Exception("Missing OpenAI credentials")
             
-            logger.info(f"Azure OpenAI config check - Endpoint: {openai_endpoint is not None}, API Key: {openai_api_key is not None}, Deployment: {deployment_name}")
-            
-            if openai_endpoint and openai_api_key:
-                client = AzureOpenAI(
-                    azure_endpoint=openai_endpoint,
-                    api_key=openai_api_key,
-                    api_version="2024-08-01-preview"
-                )
-                
-                logger.info(f"Calling Azure OpenAI for agent: {agent_type}")
-                
-                response = client.chat.completions.create(
-                    model=deployment_name,
-                    messages=[
-                        {"role": "system", "content": agent_prompt},
-                        {"role": "user", "content": f"""Scenario: {user_query}
-
-Geef een concrete, specifieke analyse voor dit exacte scenario. Vermijd generieke templates en focus op:
-1. Specifieke aspecten van dit scenario vanuit jouw expertise
-2. Concrete, actionable aanbevelingen 
-3. Realistische implementatie stappen
-4. Specifieke metrics en success criteria
-
-Maak je antwoord praktisch en direct toepasbaar op deze situatie."""}
-                    ],
-                    max_tokens=800,
-                    temperature=0.7
-                )
-                
-                ai_result = response.choices[0].message.content.strip()
-                logger.info(f"Azure OpenAI success for {agent_type}: {len(ai_result)} characters")
-                return ai_result
-        except Exception as e:
-            logger.error(f"Azure OpenAI failed for {agent_type}: {e}")
-            logger.error(f"Exception type: {type(e).__name__}")
-            logger.error(f"Exception details: {str(e)}")
-    
-    # Fallback to enhanced template responses
-    enhanced_responses = {
-        "hr": f"""🎯 **HR Strategische Analyse**
-
-**Scenario:** {user_query}
-
-**📊 HR Impact Assessment:**
-- Talent Management: Identificeer benodigde competenties
-- Organisatie Design: Evalueer huidige structuur effectiviteit  
-- Change Management: Plan voor cultuurverandering
-- Performance: KPI's voor succes meting
-
-**🚀 Aanbevelingen:**
-1. **Korte termijn (0-3 maanden):** Stakeholder analyse en quick wins
-2. **Middellange termijn (3-12 maanden):** Training en development programma's
-3. **Lange termijn (1+ jaar):** Strategische workforce planning
-
-**📈 ROI Indicatoren:**
-- Employee engagement scores
-- Retention rates en recruitment kosten
-- Productiviteit metrics en performance""",
-
-        "marketing": f"""🎯 **Marketing Strategische Analyse**
+        logger.info("Creating Azure OpenAI client...")
+        client = AzureOpenAI(
+            azure_endpoint=openai_endpoint,
+            api_key=openai_api_key,
+            api_version="2024-08-01-preview"
+        )
+        logger.info("Azure OpenAI client created successfully")
+        
+        # Use configurable agent prompts
+        agent_prompt = format_agent_prompt(agent_type, user_query)
+        
+        # Get agent configuration for advanced settings
+        agent_config = get_agent_config(agent_type)
+        
+        # Use model override if specified
+        model_name = agent_config.get("model_override") or deployment_name
+        temperature = agent_config.get("temperature", 0.7)
+        max_tokens = agent_config.get("max_tokens", 800)
+        
+        logger.info(f"Using model: {model_name}, temp: {temperature}, max_tokens: {max_tokens}")
+        
+        logger.info("Calling Azure OpenAI API...")
+        response = client.chat.completions.create(
+            model=model_name,
+            messages=[
+                {"role": "system", "content": agent_prompt},
+                {"role": "user", "content": f"Scenario: {user_query}"}
+            ],
+            max_tokens=max_tokens,
+            temperature=temperature
+        )
+        
+        ai_result = response.choices[0].message.content.strip()
+        logger.info(f"Azure OpenAI SUCCESS! Response length: {len(ai_result)}")
+        logger.info(f"Response preview: {ai_result[:100]}...")
+        return ai_result
+        
+    except Exception as e:
+        logger.error(f"Azure OpenAI FAILED: {e}")
+        logger.error(f"Exception type: {type(e).__name__}")
+        logger.error(f"Full error: {str(e)}")
+        
+        # Return a clear fallback that shows we're using fallback
+        return f"""🤖 **{agent_type.upper()} AI Analyse**
 
 **Scenario:** {user_query}
 
-**📊 Marketing Opportunity Assessment:**
-- Target Audience: Segmentatie en persona development
-- Competitive Landscape: Market positioning analyse
-- Channel Strategy: Optimale marketing mix
-- Brand Impact: Reputatie en awareness effecten
+⚠️ **AI Service Tijdelijk Niet Beschikbaar**
 
-**🚀 Marketing Roadmap:**
-1. **Launch Fase (0-2 maanden):** Brand awareness campagne
-2. **Growth Fase (2-6 maanden):** Lead generation optimalisatie  
-3. **Scale Fase (6+ maanden):** Customer retention en advocacy
+Voor dit scenario '{user_query}' zou normaal een gedetailleerde {agent_type} analyse verschijnen met:
+- Specifieke aanbevelingen voor jouw situatie
+- Concrete implementatie stappen  
+- Meetbare KPIs en success criteria
 
-**📈 Success Metrics:**
-- Brand awareness en sentiment tracking
-- Lead quality en conversion rates
-- Customer acquisition cost en lifetime value""",
+**Tijdelijke fallback actief** - herstart de analyse voor volledige AI-powered inzichten.
 
-        "product": f"""🎯 **Product Strategische Analyse**
-
-**Scenario:** {user_query}
-
-**📊 Product Impact Evaluation:**
-- User Experience: Journey mapping en pain points
-- Market Fit: Product-market alignment analyse
-- Technical Feasibility: Development complexiteit
-- Business Value: Revenue en cost implications
-
-**🚀 Product Development Roadmap:**
-1. **Discovery (0-1 maand):** User research en requirements
-2. **MVP Development (1-3 maanden):** Core feature implementation
-3. **Iteration (3+ maanden):** User feedback en optimalisatie
-
-**📈 Product Success KPIs:**
-- User adoption en engagement rates
-- Feature usage analytics
-- Customer satisfaction scores""",
-
-        "procurement": f"""🎯 **Procurement Strategische Analyse**
-
-**Scenario:** {user_query}
-
-**📊 Supply Chain Impact:**
-- Vendor Assessment: Supplier capability en reliability
-- Cost Analysis: Total cost of ownership evaluatie
-- Risk Management: Supply continuity en compliance
-- Sustainability: ESG impact en circular economy
-
-**🚀 Procurement Strategy:**
-1. **Sourcing (0-2 maanden):** RFP proces en vendor selectie
-2. **Negotiation (2-3 maanden):** Contract onderhandelingen
-3. **Implementation (3+ maanden):** Supplier onboarding en monitoring
-
-**📈 Procurement KPIs:**
-- Cost savings en budget adherence
-- Supplier performance scores
-- Contract compliance en risk mitigation""",
-
-        "tech_support": f"""🎯 **Technical Support Analyse**
-
-**Scenario:** {user_query}
-
-**📊 Technical Assessment:**
-- Infrastructure: Systeem capaciteit en schaalbaarheid
-- Security: Cybersecurity risks en compliance
-- Integration: API's en data flow optimalisatie
-- User Experience: Interface design en accessibility
-
-**🚀 Technical Implementation:**
-1. **Planning (0-1 maand):** Architecture design en risk assessment
-2. **Development (1-3 maanden):** System build en testing
-3. **Deployment (3+ maanden):** Go-live en user adoption
-
-**📈 Technical Success Metrics:**
-- System uptime en performance
-- Security incident reductie
-- User satisfaction en adoption rates""",
-
-        "generic": f"""🎯 **Strategische Business Analyse**
-
-**Scenario:** {user_query}
-
-**📊 Business Impact Assessment:**
-- Strategic Alignment: Organisatie doelen en prioriteiten
-- Stakeholder Analysis: Impact op verschillende belanghebbenden
-- Resource Requirements: Budget, tijd en competenties
-- Risk Assessment: Potentiële uitdagingen en mitigaties
-
-**🚀 Implementation Strategy:**
-1. **Preparation (0-2 maanden):** Planning en stakeholder buy-in
-2. **Execution (2-6 maanden):** Gefaseerde implementatie
-3. **Optimization (6+ maanden):** Continuous improvement
-
-**📈 Business Success Indicators:**
-- Strategic goal achievement
-- Stakeholder satisfaction
-- ROI en value realization""",
-
-        "planner": f"""🎯 **Strategische Planning Analyse**
-
-**Scenario:** {user_query}
-
-**📊 Planning Framework:**
-- Timeline Analysis: Kritieke mijlpalen en dependencies
-- Resource Planning: Capaciteit en budget allocatie
-- Risk Planning: Scenario's en contingency planning
-- Success Criteria: Meetbare doelstellingen en KPIs
-
-**🚀 Strategische Roadmap:**
-1. **Phase 1 (0-3 maanden):** Foundation en quick wins
-2. **Phase 2 (3-9 maanden):** Core implementation
-3. **Phase 3 (9+ maanden):** Optimization en scaling
-
-**📈 Planning Success Metrics:**
-- Milestone achievement rates
-- Budget adherence en resource efficiency
-- Stakeholder alignment scores"""
-    }
-    
-    return enhanced_responses.get(agent_type, enhanced_responses["generic"])
+**Debug info:** {str(e)[:100]}"""
 
 class Config:
     FRONTEND_SITE_NAME = ""
 
 # Set up logger
 logger = logging.getLogger(__name__)
+
+# Agent configuration system - can be extended with Directus CMS
+AGENT_CONFIGS = {
+    "hr": {
+        "name": "HR Specialist",
+        "prompt": "Je bent een ervaren HR strategist. Voor scenario '{query}' geef concrete HR adviezen over talent management, organisatie design, en implementatie. Geen templates - specifieke acties.",
+        "focus": ["talent management", "organisatie design", "change management", "performance KPIs"],
+        "instructions": "Focus op praktische implementatie en menselijke aspecten",
+        "system_prompt": "Je bent een expert HR adviseur met 15+ jaar ervaring",
+        "capabilities": ["talent_analysis", "org_design", "change_management"],
+        "response_format": "markdown",
+        "language": "nl",
+        "temperature": 0.7,
+        "max_tokens": 1500
+    },
+    "marketing": {
+        "name": "Marketing Expert", 
+        "prompt": "Je bent een senior marketing strategist. Voor scenario '{query}' geef concrete marketing adviezen over doelgroep, kanalen, en campagnes. Geen templates - specifieke tactieken.",
+        "focus": ["doelgroep segmentatie", "channel strategy", "campagne development", "ROI metrics"],
+        "instructions": "Richt je op meetbare resultaten en data-driven aanpak",
+        "system_prompt": "Je bent een ervaren marketing strategist met focus op ROI",
+        "capabilities": ["market_analysis", "campaign_planning", "roi_optimization"],
+        "response_format": "markdown",
+        "language": "nl",
+        "temperature": 0.7,
+        "max_tokens": 1500
+    },
+    "product": {
+        "name": "Product Specialist",
+        "prompt": "Je bent een product strategy expert. Voor scenario '{query}' geef concrete product adviezen over features, UX, en roadmap. Geen templates - specifieke product beslissingen.",
+        "focus": ["product features", "user experience", "technical feasibility", "product metrics"],
+        "instructions": "Balanceer gebruikersbehoeften met technische realiteit",
+        "system_prompt": "Je bent een product manager met sterke UX en tech achtergrond",
+        "capabilities": ["user_research", "feature_planning", "roadmap_development"],
+        "response_format": "markdown",
+        "language": "nl",
+        "temperature": 0.6,
+        "max_tokens": 1500
+    },
+    "procurement": {
+        "name": "Procurement Agent",
+        "prompt": "Je bent een procurement strategist. Voor scenario '{query}' geef concrete sourcing adviezen over leveranciers, kosten, en risico's. Geen templates - specifieke sourcing acties.",
+        "focus": ["vendor management", "cost optimization", "risk mitigation", "contract strategy"],
+        "instructions": "Focus op kostenbesparingen en risicominimalisatie",
+        "system_prompt": "Je bent een senior inkoop specialist met sterke onderhandelingsvaardigheden",
+        "capabilities": ["vendor_analysis", "cost_optimization", "risk_assessment"],
+        "response_format": "markdown",
+        "language": "nl",
+        "temperature": 0.5,
+        "max_tokens": 1500
+    },
+    "tech_support": {
+        "name": "Tech Support Agent",
+        "prompt": "Je bent een IT/tech strategist. Voor scenario '{query}' geef concrete technische adviezen over infrastructure, security, en implementatie. Geen templates - specifieke tech oplossingen.",
+        "focus": ["infrastructure", "security", "scalability", "implementation"],
+        "instructions": "Prioriteer security en schaalbaarheid in alle oplossingen",
+        "system_prompt": "Je bent een senior IT architect met security expertise",
+        "capabilities": ["infrastructure_design", "security_analysis", "scalability_planning"],
+        "response_format": "markdown",
+        "language": "nl",
+        "temperature": 0.4,
+        "max_tokens": 1500
+    },
+    "generic": {
+        "name": "Business Strategist",
+        "prompt": "Je bent een senior business strategist. Voor scenario '{query}' geef concrete business adviezen over strategie, resources, en ROI. Geen templates - specifieke business acties.",
+        "focus": ["strategic alignment", "resource planning", "business value", "implementation roadmap"],
+        "instructions": "Koppel alle adviezen aan concrete business outcomes",
+        "system_prompt": "Je bent een ervaren business consultant met brede expertise",
+        "capabilities": ["strategy_development", "business_analysis", "implementation_planning"],
+        "response_format": "markdown",
+        "language": "nl",
+        "temperature": 0.7,
+        "max_tokens": 1500
+    },
+    "planner": {
+        "name": "Strategic Planner",
+        "prompt": "Je bent een strategische planner. Voor scenario '{query}' geef concrete planning adviezen over tijdlijnen, mijlpalen, en resources. Geen templates - specifieke planning acties.",
+        "focus": ["timeline planning", "milestone definition", "resource allocation", "risk planning"],
+        "instructions": "Maak realistische planningen met buffer voor onverwachte zaken",
+        "system_prompt": "Je bent een ervaren project manager met strategische focus",
+        "capabilities": ["project_planning", "resource_management", "risk_planning"],
+        "response_format": "markdown", 
+        "language": "nl",
+        "temperature": 0.6,
+        "max_tokens": 1500
+    }
+}
+
+def get_agent_config(agent_type: str) -> dict:
+    """Get agent configuration - loads from Directus CMS if available, falls back to local configs"""
+    if DIRECTUS_AVAILABLE and directus_manager.is_enabled():
+        try:
+            directus_configs = directus_manager.get_agent_configs_sync()
+            if directus_configs and agent_type in directus_configs:
+                return directus_configs[agent_type]
+        except Exception as e:
+            logger.warning(f"Failed to load from Directus: {e}")
+    
+    return AGENT_CONFIGS.get(agent_type, AGENT_CONFIGS["generic"])
+
+def format_agent_prompt(agent_type: str, user_query: str) -> str:
+    """Format agent prompt with query - customizable per agent with enhanced features"""
+    config = get_agent_config(agent_type)
+    
+    # Start with system prompt if available
+    system_part = config.get("system_prompt", "")
+    if system_part:
+        system_part += "\n\n"
+    
+    # Add main prompt
+    main_prompt = config["prompt"].format(query=user_query)
+    
+    # Add instructions if available
+    instructions = config.get("instructions", "")
+    if instructions:
+        main_prompt += f"\n\nSpecifieke instructies: {instructions}"
+    
+    # Add capabilities context
+    capabilities = config.get("capabilities", [])
+    if capabilities:
+        main_prompt += f"\n\nJe hebt toegang tot deze capabilities: {', '.join(capabilities)}"
+    
+    # Add response format guidance
+    response_format = config.get("response_format", "markdown")
+    if response_format == "markdown":
+        main_prompt += "\n\nFormatteer je antwoord in duidelijke Markdown met headers en bullet points."
+    elif response_format == "json":
+        main_prompt += "\n\nGeef je antwoord terug als gestructureerd JSON object."
+    
+    # Add language preference
+    language = config.get("language", "nl")
+    if language != "nl":
+        lang_names = {"en": "English", "fr": "French", "de": "German"}
+        main_prompt += f"\n\nAntwoord in het {lang_names.get(language, language)}."
+    
+    return system_part + main_prompt
 
 # Check if the Application Insights Instrumentation Key is set in the environment variables
 connection_string = os.getenv("APPLICATIONINSIGHTS_CONNECTION_STRING")
@@ -514,10 +468,184 @@ async def root():
     }
 
 
-@app.get("/health")
+@app.get("/api/agent-configs")
+async def get_agent_configs():
+    """Get all agent configurations - integrates with Directus CMS when available"""
+    if DIRECTUS_AVAILABLE and directus_manager.is_enabled():
+        try:
+            directus_configs = directus_manager.get_agent_configs_sync()  # Use sync version
+            if directus_configs:
+                return {
+                    "agents": directus_configs,
+                    "source": "directus_cms", 
+                    "count": len(directus_configs)
+                }
+        except Exception as e:
+            logger.warning(f"Failed to load from Directus, using local configs: {e}")
+    
+    return {
+        "agents": AGENT_CONFIGS,
+        "source": "local_config",
+        "count": len(AGENT_CONFIGS)
+    }
+
+@app.put("/api/agent-configs/{agent_type}")
+async def update_agent_config(agent_type: str, config: dict):
+    """Update agent configuration - syncs with Directus CMS when available"""
+    # Validate required fields
+    if "name" not in config or "prompt" not in config:
+        raise HTTPException(status_code=400, detail="Missing required fields: name, prompt")
+    
+    # Update local config first
+    if agent_type in AGENT_CONFIGS:
+        AGENT_CONFIGS[agent_type].update(config)
+        
+        # Try to sync with Directus
+        if DIRECTUS_AVAILABLE and directus_manager.is_enabled():
+            try:
+                success = await directus_manager.update_agent_config(agent_type, config)
+                if success:
+                    return {
+                        "message": f"Agent {agent_type} configuration updated in both local and Directus",
+                        "agent": AGENT_CONFIGS[agent_type],
+                        "synced_to_directus": True
+                    }
+                else:
+                    return {
+                        "message": f"Agent {agent_type} configuration updated locally (Directus sync failed)",
+                        "agent": AGENT_CONFIGS[agent_type],
+                        "synced_to_directus": False
+                    }
+            except Exception as e:
+                logger.warning(f"Failed to sync to Directus: {e}")
+                return {
+                    "message": f"Agent {agent_type} configuration updated locally only",
+                    "agent": AGENT_CONFIGS[agent_type],
+                    "synced_to_directus": False
+                }
+        
+        return {
+            "message": f"Agent {agent_type} configuration updated",
+            "agent": AGENT_CONFIGS[agent_type],
+            "directus_available": DIRECTUS_AVAILABLE
+        }
+    else:
+        raise HTTPException(status_code=404, detail=f"Agent {agent_type} not found")
+
+@app.get("/api/directus/status")
+async def get_directus_status():
+    """Get Directus CMS integration status"""
+    if DIRECTUS_AVAILABLE:
+        return {
+            "directus_available": True,
+            "directus_enabled": directus_manager.is_enabled(),
+            "directus_url": directus_manager.base_url if directus_manager.is_enabled() else None,
+            "collection": directus_manager.collection
+        }
+    else:
+        return {
+            "directus_available": False,
+            "message": "Directus integration module not available"
+        }
+
+@app.get("/api/directus/schema")
+async def get_directus_schema():
+    """Get recommended Directus collection schema for AI agents"""
+    if DIRECTUS_AVAILABLE:
+        return directus_manager.get_collection_schema()
+    else:
+        raise HTTPException(status_code=503, detail="Directus integration not available")
+
+# Add endpoint to test agent prompts
+@app.post("/api/test-agent-prompt")
+async def test_agent_prompt(request: dict):
+    """Test how an agent prompt would look with a specific query"""
+    agent_type = request.get("agent_type", "generic")
+    query = request.get("query", "Test scenario")
+    
+    # Get config from Directus or fallback to local
+    config = get_agent_config(agent_type)
+    if not config or config == AGENT_CONFIGS.get("generic"):
+        # Check if this is a valid Directus agent type
+        if DIRECTUS_AVAILABLE and directus_manager.is_enabled():
+            directus_configs = directus_manager.get_agent_configs_sync()
+            if directus_configs and agent_type not in directus_configs:
+                available_agents = list(directus_configs.keys())
+                raise HTTPException(status_code=404, detail=f"Agent {agent_type} not found. Available: {available_agents}")
+        else:
+            if agent_type not in AGENT_CONFIGS:
+                raise HTTPException(status_code=404, detail=f"Agent {agent_type} not found")
+    
+    formatted_prompt = format_agent_prompt(agent_type, query)
+    config = get_agent_config(agent_type)
+    
+    return {
+        "agent_type": agent_type,
+        "agent_name": config["name"],
+        "query": query,
+        "formatted_prompt": formatted_prompt,
+        "focus_areas": config["focus"],
+        "capabilities": config.get("capabilities", []),
+        "instructions": config.get("instructions", ""),
+        "response_format": config.get("response_format", "markdown"),
+        "language": config.get("language", "nl"),
+        "temperature": config.get("temperature", 0.7),
+        "max_tokens": config.get("max_tokens", 1500)
+    }
+
+@app.post("/api/agent-features")
+async def manage_agent_features(request: dict):
+    """Manage advanced agent features via API"""
+    agent_type = request.get("agent_type")
+    action = request.get("action")  # "add_capability", "set_instruction", "update_format"
+    
+    if not agent_type or agent_type not in AGENT_CONFIGS:
+        raise HTTPException(status_code=404, detail="Agent not found")
+    
+    config = AGENT_CONFIGS[agent_type]
+    
+    if action == "add_capability":
+        capability = request.get("capability")
+        if capability and capability not in config.get("capabilities", []):
+            if "capabilities" not in config:
+                config["capabilities"] = []
+            config["capabilities"].append(capability)
+            
+    elif action == "set_instruction":
+        instruction = request.get("instruction", "")
+        config["instructions"] = instruction
+        
+    elif action == "update_format":
+        format_type = request.get("format", "markdown")
+        if format_type in ["markdown", "html", "text", "json"]:
+            config["response_format"] = format_type
+            
+    elif action == "set_language":
+        language = request.get("language", "nl")
+        if language in ["nl", "en", "fr", "de"]:
+            config["language"] = language
+    
+    # Try to sync with Directus if available
+    if DIRECTUS_AVAILABLE and directus_manager.is_enabled():
+        try:
+            await directus_manager.update_agent_config(agent_type, config)
+        except Exception as e:
+            logger.warning(f"Failed to sync feature update to Directus: {e}")
+    
+    return {
+        "message": f"Agent {agent_type} {action} completed",
+        "updated_config": config
+    }
+
+@app.get("/api/health")
 async def health_check():
-    """Health check endpoint for Container Apps."""
-    return {"status": "healthy", "service": "ai-agent-gov-backend"}
+    """Health check endpoint with AI service status"""
+    return {
+        "status": "healthy",
+        "azure_openai_available": AZURE_OPENAI_AVAILABLE,
+        "timestamp": datetime.now().isoformat(),
+        "agents_configured": len(AGENT_CONFIGS)
+    }
 
 
 @app.post("/api/input_task")
@@ -1280,53 +1408,33 @@ async def get_agent_tools():
                 description: Arguments required by the tool function
     """
     try:
-        # Return hard-coded agent list for now to test the frontend
-        available_agents = [
-            {
-                "agent": "hr",
-                "function": "create_hr_agent",
-                "description": "Creates an HR agent for human resources tasks",
-                "arguments": "session_id, user_id, temperature (optional)"
-            },
-            {
-                "agent": "marketing",
-                "function": "create_marketing_agent", 
-                "description": "Creates a marketing agent for marketing campaign tasks",
-                "arguments": "session_id, user_id, temperature (optional)"
-            },
-            {
-                "agent": "product",
-                "function": "create_product_agent",
-                "description": "Creates a product agent for product development tasks", 
-                "arguments": "session_id, user_id, temperature (optional)"
-            },
-            {
-                "agent": "procurement",
-                "function": "create_procurement_agent",
-                "description": "Creates a procurement agent for purchasing and vendor tasks",
-                "arguments": "session_id, user_id, temperature (optional)"
-            },
-            {
-                "agent": "tech_support", 
-                "function": "create_tech_support_agent",
-                "description": "Creates a technical support agent for IT support tasks",
-                "arguments": "session_id, user_id, temperature (optional)"
-            },
-            {
-                "agent": "generic",
-                "function": "create_generic_agent",
-                "description": "Creates a generic agent for general purpose tasks",
-                "arguments": "session_id, user_id, temperature (optional)"
-            },
-            {
-                "agent": "planner",
-                "function": "create_planner_agent", 
-                "description": "Creates a planner agent for task planning and coordination",
-                "arguments": "session_id, user_id, temperature (optional)"
-            }
-        ]
-        
-        return available_agents
+        # Haal agents uit Directus
+        if DIRECTUS_AVAILABLE and directus_manager.is_enabled():
+            directus_configs = directus_manager.get_agent_configs_sync()
+            if directus_configs:
+                # Maak een visueel en functioneel agent tools object
+                available_agents = []
+                for agent_type, config in directus_configs.items():
+                    available_agents.append({
+                        "agent": agent_type,
+                        "function": f"create_{agent_type}_agent",
+                        "description": config.get("instructions", config.get("prompt", config.get("name", "AI Agent"))),
+                        "arguments": "session_id, user_id, temperature (optional)",
+                        "name": config.get("name", agent_type),
+                        "focus": config.get("focus", []),
+                        "system_prompt": config.get("system_prompt", ""),
+                        "example_responses": config.get("example_responses", []),
+                        "capabilities": config.get("capabilities", []),
+                        "response_format": config.get("response_format", "markdown"),
+                        "language": config.get("language", "nl"),
+                        "temperature": config.get("temperature", 0.7),
+                        "max_tokens": config.get("max_tokens", 1500),
+                        "model_override": config.get("model_override", ""),
+                        "custom_features": config.get("custom_features", {})
+                    })
+                return available_agents
+        # fallback: geen directus, return lege lijst
+        return []
     except Exception as e:
         logger.error(f"Error getting agent tools: {e}")
         return []
