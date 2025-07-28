@@ -69,14 +69,22 @@ function App() {
           throw new Error('Expected array from backend, got: ' + typeof data);
         }
         
-        const formattedAgents = data.map((agent: any, index: number) => ({
-          id: index + 1,
-          name: agent.agent,
-          description: agent.description,
-          expertise: agent.agent
-        }));
-        
-        console.log('✅ Formatted agents:', formattedAgents);
+        // Filter alleen de drie gewenste agents op naam (case-insensitive)
+        const allowed = [
+          'ai demografie',
+          'ai wonen',
+          'ai economie'
+        ];
+        const formattedAgents = data
+          .map((agent: any, index: number) => ({
+            id: index + 1,
+            name: agent.agent,
+            description: agent.description,
+            expertise: agent.agent
+          }))
+          .filter(agent => allowed.includes((agent.name || '').toLowerCase()));
+
+        console.log('✅ Filtered agents:', formattedAgents);
         setAgents(formattedAgents);
         setLoading(false);
       } catch (error: any) {
@@ -198,29 +206,30 @@ function App() {
     return (
       <div style={{
         minHeight: '100vh',
-        background: 'linear-gradient(135deg, #f3e8ff 0%, #fce7f3 50%, #e0e7ff 100%)',
+        background: 'linear-gradient(135deg, #eaf6ff 0%, #2563eb 100%)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
         fontFamily: 'system-ui, -apple-system, sans-serif'
       }}>
         <div style={{
-          background: 'rgba(255, 255, 255, 0.9)',
+          background: 'rgba(255, 255, 255, 0.95)',
           backdropFilter: 'blur(20px)',
           borderRadius: '24px',
           padding: '48px',
-          textAlign: 'center'
+          textAlign: 'center',
+          boxShadow: '0 8px 32px rgba(30,58,138,0.08)'
         }}>
           <div style={{
             width: '40px',
             height: '40px',
-            border: '4px solid #8b5cf6',
+            border: '4px solid #2563eb',
             borderTop: '4px solid transparent',
             borderRadius: '50%',
             animation: 'spin 1s linear infinite',
             margin: '0 auto 24px'
           }}></div>
-          <h2 style={{ color: '#8b5cf6', margin: 0 }}>Laden van agents uit CMS...</h2>
+          <h2 style={{ color: '#2563eb', margin: 0 }}>Laden van agents uit CMS...</h2>
         </div>
       </div>
     );
@@ -229,13 +238,13 @@ function App() {
   return (
     <div style={{
       minHeight: '100vh',
-      background: 'linear-gradient(135deg, #f3e8ff 0%, #fce7f3 50%, #e0e7ff 100%)',
+      background: 'linear-gradient(135deg, #eaf6ff 0%, #2563eb 100%)',
       fontFamily: 'system-ui, -apple-system, sans-serif'
     }}>
       <header style={{
-        background: 'rgba(255, 255, 255, 0.9)',
+        background: 'rgba(255, 255, 255, 0.97)',
         backdropFilter: 'blur(20px)',
-        borderBottom: '1px solid rgba(168, 85, 247, 0.2)',
+        borderBottom: '1px solid #2563eb22',
         position: 'sticky',
         top: 0,
         zIndex: 50
@@ -250,31 +259,31 @@ function App() {
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <div style={{
-              padding: '8px',
-              background: 'linear-gradient(135deg, #8b5cf6, #ec4899)',
-              borderRadius: '12px',
-              boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
-            }}>
-              <span style={{ fontSize: '24px' }}>✨</span>
+            padding: '8px',
+            background: 'linear-gradient(135deg, #2563eb, #eaf6ff)',
+            borderRadius: '12px',
+            boxShadow: '0 4px 12px rgba(30,58,138,0.15)'
+          }}>
+            <span style={{ fontSize: '24px' }}>🤖</span>
             </div>
             <div>
               <h1 style={{
                 fontSize: '24px',
                 fontWeight: 'bold',
-                background: 'linear-gradient(135deg, #8b5cf6, #ec4899)',
+                background: 'linear-gradient(135deg, #2563eb, #eaf6ff)',
                 WebkitBackgroundClip: 'text',
                 WebkitTextFillColor: 'transparent',
                 margin: 0
               }}>
-                SoMC.AI
+                AI Agents Zeeland
               </h1>
               <p style={{ fontSize: '14px', color: '#6b7280', margin: 0 }}>
                 The AI-powered government platform
               </p>
             </div>
           </div>
-          <div style={{ fontSize: '14px', color: '#8b5cf6', fontWeight: '500' }}>
-            CMS-Powered ✨
+          <div style={{ fontSize: '14px', color: '#2563eb', fontWeight: '500' }}>
+            CMS-Powered
           </div>
         </div>
       </header>
@@ -290,8 +299,8 @@ function App() {
             background: 'rgba(255, 255, 255, 0.8)',
             backdropFilter: 'blur(10px)',
             borderRadius: '50px',
-            border: '1px solid rgba(168, 85, 247, 0.2)',
-            color: '#8b5cf6',
+            border: '1px solid #2563eb22',
+            color: '#2563eb',
             fontSize: '14px',
             fontWeight: '500',
             marginBottom: '24px'
@@ -301,7 +310,7 @@ function App() {
           <h2 style={{
             fontSize: '56px',
             fontWeight: 'bold',
-            background: 'linear-gradient(135deg, #1f2937, #8b5cf6, #ec4899)',
+            background: 'linear-gradient(135deg, #2563eb, #eaf6ff)',
             WebkitBackgroundClip: 'text',
             WebkitTextFillColor: 'transparent',
             lineHeight: '1.1',
@@ -311,12 +320,12 @@ function App() {
           </h2>
           <p style={{
             fontSize: '20px',
-            color: '#374151',
+            color: '#2563eb',
             maxWidth: '800px',
             margin: '0 auto',
             lineHeight: '1.6'
           }}>
-            Agents worden dynamisch geladen uit het CMS. Voeg nieuwe agents toe via Directus!
+            Alleen Demografie, Wonen en Economie agents worden getoond.
           </p>
         </div>
 
